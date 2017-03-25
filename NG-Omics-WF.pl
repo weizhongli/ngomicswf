@@ -287,6 +287,7 @@ if    ($this_task eq  "log-cpu"     ) { task_log_cpu();      exit 0;}
 elsif ($this_task eq  "list-jobs"   ) { task_list_jobs();    exit 0;}
 elsif ($this_task eq  "snapshot"    ) { task_snapshot();     exit 0;}
 elsif ($this_task eq  "delete-jobs" ) { task_delete_jobs($second_opt);  exit 0;}
+elsif ($this_task eq  "write-sh"    ) {                                 exit 0;}
 elsif ($this_task                   ) { die "undefined task $this_task";}
 
 ################################################################################################
@@ -1156,6 +1157,7 @@ CMDOPT JobID_B:opt0:opt1
     -r root directory of NGS-tools
 
     -J optional tasks
+        write-sh: write sh files and quite
         log-cpu: gathering cpu time for each run for each sample
         list-jobs: list jobs
         snapshot: snapshot current job status
