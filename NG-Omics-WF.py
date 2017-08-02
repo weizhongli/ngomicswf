@@ -46,6 +46,7 @@ subset_flag = False
 subset_jobs = []
 qstat_xml_data = {}
 job_list = collections.defaultdict(dict)  # as job_list[$t_job_id][$t_sample_id] = {}
+execution_submitted = {}                  # number of submitted jobs (qsub) or threads (local sh)
 ############## END Global variables
 
 def read_parameters(args):
@@ -239,150 +240,262 @@ echo "sample={5} job={6} host=$my_host pid=$my_pid queue=$my_queue cores=$my_cor
         except IOError:
           print 'cannot write to', job_list[ 't_job_id' ][ 't_sample_id' ][ 'sh_file' ]
           exit(1)
+### END def make_job_list(NGS_config):
 
 
-############################################################################################
-# _______    ________  _________       ___________________   ________  .____       _________
-# \      \  /  _____/ /   _____/       \__    ___/\_____  \  \_____  \ |    |     /   _____/
-# /   |   \/   \  ___ \_____  \   ______ |    |    /   |   \  /   |   \|    |     \_____  \ 
-#/    |    \    \_\  \/        \ /_____/ |    |   /    |    \/    |    \    |___  /        \
-#\____|__  /\______  /_______  /         |____|   \_______  /\_______  /_______ \/_______  /
-#        \/        \/        \/                           \/         \/        \/        \/ 
-############################################################################################
 
-if __name__ == "__main__":
-  parser = argparse.ArgumentParser(formatter_class = RawTextHelpFormatter,
-                                   description     = textwrap.dedent('''\
+def task_log_cpu():
+  '''
+sub task_log_cpu {
+  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id);
 
-            ==================================================================
-            Workflow tools for next generation genomics, metagenomics, RNA-seq
-            and other type of omics data analyiss,
-        
-            Software originally developed since 2010 by Weizhong Li at UCSD
-                                                          currently at JCVI
-        
-            http://weizhongli-lab.org/ngomicswf           liwz@sdsc.edu
-            ==================================================================
-
-   '''))
-
-  parser.add_argument('-i', '--input',       help="workflow configration file, required", required=True)
-  parser.add_argument('-s', '--sample_file', help='''
-sample data file, required unless -S is present
-File format example:
-#Sample data file example, TAB or space delimited for following lines
-Sample_ID1 sample_data_0 sample_data_1
-Sample_ID2 sample_data_0 sample_data_1
-Sample_ID3 sample_data_0 sample_data_1
-  ''')
-  parser.add_argument('-S', '--sample_name', help='''
-sample data from command line, required unless -s is present
-format:
-Sample_ID1:sample_data_0:sample_data_0:sample_data_1,Sample_ID2:sample_data_0:sample_data_1
-  ''')
-  parser.add_argument('-t', '--parameter_file', help='''
-replace default paramters in workflow configration file
-File format example:
-#parameter file example, TAB or space delimited for following lines
-CMDOPT JobID_A:opt0:opt1:opt2
-CMDOPT JobID_B:opt0:opt1
-  ''')
-  parser.add_argument('-T', '--parameter_name', help='''
-parameter from command line
-format:
-JobID_A:opt0:opt1:opt2,JobID_B:opt0:opt1
-  ''')
-  parser.add_argument('-j', '--jobs', help='''run sub set of jobs, optional
-the workflow will run all jobs by default.
-to run sub set of jobs: -j qc or -j qc,fastqc
-  ''')
-  parser.add_argument('-J', '--task', help='''optional tasks
-write-sh: write sh files and quite
-log-cpu: gathering cpu time for each run for each sample
-list-jobs: list jobs
-snapshot: snapshot current job status
-delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
-  e.g. -J delete-jobs -Z jobids:assembly,blast  ---delete assembly,blast and all jobs depends on them
-       -J delete-jobs -Z run_after:filename     ---delete jobs that has start time (WF.start.date) after this file, and all depending jobs
-  ''')
-  parser.add_argument('-Z', '--second_parameter', help='secondary parameter used by other options, such as -J')
-  parser.add_argument('-Q', '--queye', help='queue system, e.g. PBS, SGE', default='SGE')
-
-  args = parser.parse_args()
-
-  if (args.sample_file is None) and (args.sample_name is None) :
-    parser.error('No sample file or sample name')
-
-  NGS_config = imp.load_source('NGS_config', args.input)
-
-  read_samples(args)
-  print 'Samples'
-  print NGS_samples
-  print NGS_sample_data
-
-  read_parameters(args)
-  print 'Parameters'
-  print NGS_opts
-
-  if args.jobs:
-    subset_flag = True
-    subset_jobs = re.split(',', args.jobs)
-    ## -- add_subset_jobs_by_dependency()
-    print subset_jobs
-
-  if not os.path.exists('WF-sh'):
-    os.system('mkdir WF-sh')
-
-  ## -- task_level_jobs();
-  ## -- my @NGS_batch_jobs = sort {($NGS_batch_jobs{$a}->{'job_level'} <=> $NGS_batch_jobs{$b}->{'job_level'}) or ($a cmp $b)} keys %NGS_batch_jobs;
-
-  make_job_list(NGS_config)
-
-
-################################################################################################
-#  _____               _   _  _____  _____  _           _       _           _       _         
-# |  __ \             | \ | |/ ____|/ ____|| |         | |     | |         (_)     | |        
-# | |__) |   _ _ __   |  \| | |  __| (___  | |__   __ _| |_ ___| |__        _  ___ | |__  ___ 
-# |  _  / | | | '_ \  | . ` | | |_ |\___ \ | '_ \ / _` | __/ __| '_ \      | |/ _ \| '_ \/ __|
-# | | \ \ |_| | | | | | |\  | |__| |____) || |_) | (_| | || (__| | | |     | | (_) | |_) \__ \
-# |_|  \_\__,_|_| |_| |_| \_|\_____|_____/ |_.__/ \__,_|\__\___|_| |_|     | |\___/|_.__/|___/
-#                                      ______                      ______ _/ |                
-#                                     |______|                    |______|__/                 
-########## Run NGS_batch_jobs for each samples http://patorjk.com/software/taag
-################################################################################################
-
-"""
-my $this_task    = $opts{J};
-our $G_NGS_root   = $opts{r};
-my $queue_system = $opts{Q}; $queue_system = "SGE" unless $queue_system;
-my $second_opt   = $opts{Z};
-my $sleep_time_min = 15;
-my $sleep_time_max = 120;
-if    ($this_task eq  "log-cpu"     ) { task_log_cpu();      exit 0;}
-elsif ($this_task eq  "list-jobs"   ) { task_list_jobs();    exit 0;}
-elsif ($this_task eq  "snapshot"    ) { task_snapshot();     exit 0;}
-elsif ($this_task eq  "delete-jobs" ) { task_delete_jobs($second_opt);  exit 0;}
-elsif ($this_task eq  "write-sh"    ) {                                 exit 0;}
-elsif ($this_task                   ) { die "undefined task $this_task";}
-
-
-my %execution_submitted = (); # number of submitted jobs (qsub) or threads (local sh)
-my $sleep_time     = $sleep_time_min;
-while(1) {
-  my $flag_job_done = 1;
-
-  ########## reset execution_submitted to 0
-  foreach $i (keys %NGS_executions) { $execution_submitted{$i} = 0; }
-
-  my $flag_qstat_xml_call = 0;
+  my %cpu_info;
   foreach $t_job_id (keys %NGS_batch_jobs) {
+    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
     my $t_job = $NGS_batch_jobs{$t_job_id};
-    my $t_execution = $NGS_executions{ $t_job->{"execution"} };
-    my $exe_type = $t_execution->{type};
-    $flag_qstat_xml_call = 1 if (($queue_system eq "SGE") and (($exe_type eq "qsub") or ($exe_type eq "qsub-pe")));
-  }
-  SGE_qstat_xml_query() if $flag_qstat_xml_call;
+    foreach $t_sample_id (@NGS_samples) {
 
+      $cpu_info{$t_job_id}{$t_sample_id} = [$t_wall, $t_cpu];
+    }
+  }
+
+  foreach $t_sample_id (@NGS_samples) {
+    my $f_cpu = "$pwd/$t_sample_id/WF.cpu";
+    open(CPUOUT, "> $f_cpu") || die "Can not open $f_cpu";
+    print CPUOUT "#job_name\tCores\tWall(s)\tWall_time\tCPU(s)\tCPU_time\n";
+    my $min_start = 1402092131 * 999999;
+    my $max_end   = 0;
+    my $sum_cpu   = 0;
+    foreach $t_job_id (keys %NGS_batch_jobs) {
+      if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
+      my $t_job = $NGS_batch_jobs{$t_job_id};
+      my $t_core     = $t_job->{"cores_per_cmd"} * $t_job->{"no_parallel"};
+
+      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
+      my $f_start    = $t_sample_job->{'start_file'};
+      my $f_complete = $t_sample_job->{'complete_file'};
+      my $f_cpu      = $t_sample_job->{'cpu_file'};
+      my $t_start    = `cat $f_start`;    $t_start =~ s/\s//g; $min_start = $t_start if ($t_start < $min_start);
+      my $t_end      = `cat $f_complete`; $t_end   =~ s/\s//g; $max_end   = $t_end   if ($t_end   > $max_end);
+      my $t_wall     = int($t_end - $t_start);
+         $t_wall     = 0 unless ($t_wall>0);
+
+      my $t_cpu = 0;
+      if (open(TCPU, $f_cpu)) {
+        while($ll = <TCPU>) {
+          chop($ll);
+          if ($ll =~ /^(\d+)m(\d+)/) {
+            $t_cpu += $1 * 60;
+          }
+        }
+        close(TCPU);
+      }
+      $sum_cpu += $t_cpu;
+
+      my $t_walls = time_str1($t_wall);
+      my $t_cpus  = time_str1($t_cpu);
+      print CPUOUT "$t_job_id\t$t_core\t$t_wall\t$t_walls\t$t_cpu\t$t_cpus\n";
+    }
+    my $t_wall = ($max_end - $min_start); $t_wall     = 0 unless ($t_wall>0);
+    my $t_walls = time_str1($t_wall);
+    my $sum_cpus= time_str1($sum_cpu);
+    print CPUOUT "total\t-\t$t_wall\t$t_walls\t$sum_cpu\t$sum_cpus\n";
+    close(CPUOUT);
+  }
+}
+######### END task_log_cpu
+  '''
+#### END def task_log_cpu():
+
+
+def task_list_jobs():
+  '''
+sub task_list_jobs {
+  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id, $t_job);
+  foreach $t_job_id (@NGS_batch_jobs) {
+    $t_job = $NGS_batch_jobs{$t_job_id};
+    #my @t_infiles = @{$t_job->{"infiles"}};
+    my @t_injobs  = @{$t_job->{"injobs"}};
+
+    #print "\tInput_files:", join(",", @t_infiles) if @t_infiles;
+    print "$t_job_id\tIn_jobs:[" , join(",", @t_injobs), "]\tJob_level:$t_job->{'job_level'}\n";
+  }
+}
+########## END task_list_jobs
+  '''
+#### END def task_list_jobs()
+
+def task_snapshot():
+  '''
+sub task_snapshot {
+  my ($t_job_id, $t_sample_id);
+  my ($i, $j, $k);
+
+  if ($this_task) {
+    my $flag_qstat_xml_call = 0;
+    foreach $t_job_id (keys %NGS_batch_jobs) {
+      my $t_job = $NGS_batch_jobs{$t_job_id};
+      my $t_execution = $NGS_executions{ $t_job->{"execution"} };
+      my $exe_type = $t_execution->{type};
+      $flag_qstat_xml_call = 1 if (($queue_system eq "SGE") and (($exe_type eq "qsub") or ($exe_type eq "qsub-pe")));
+    }
+    SGE_qstat_xml_query() if $flag_qstat_xml_call;
+
+    foreach $t_sample_id (@NGS_samples) {
+      foreach $t_job_id (keys %NGS_batch_jobs) {
+        check_submitted_job($t_job_id, $t_sample_id);
+      }
+    }
+  }
+
+  my $max_len_sample = 0;
+  foreach $t_sample_id (@NGS_samples) {
+    $max_len_sample = length($t_sample_id) if (length($t_sample_id) > $max_len_sample);
+  }
+  my $max_len_job = 0;
+  foreach $t_job_id (@NGS_batch_jobs) {
+    $max_len_job = length($t_job_id) if (length($t_job_id) > $max_len_job);
+  }
+
+  print <<EOD;
+Job status: 
+.\twait
+-\tsubmitted
+r\trunning  
++\tcompleted
+!\terror
+EOD
+
+  for ($i=$max_len_job-1; $i>=0; $i--) {
+    print ' 'x$max_len_sample, "\t";
+    foreach $t_job_id (@NGS_batch_jobs) {
+      print " ", ($i<length($t_job_id) ? substr(reverse($t_job_id), $i, 1):" ");
+    }
+    print "\n";
+  }
+
+  foreach $t_sample_id (@NGS_samples) {
+    print "$t_sample_id\t";
+    foreach $t_job_id (@NGS_batch_jobs) {
+      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
+      my $status = $t_sample_job->{'status'};
+      if    ($status eq "completed") { print " +";}
+      elsif ($status eq "submitted") { print " -";}
+      elsif ($status eq "running"  ) { print " r";}
+      elsif ($status eq "wait"     ) { print " .";}
+      elsif ($status eq "error"    ) { print " !";}
+      else                           { print " _";}
+    }
+    print "\n";
+  }
+}
+########## END task_snapshot
+  '''
+### def task_snapshot():
+
+def task_delete_jobs():
+  '''
+sub task_delete_jobs {
+  my $opt = shift;
+  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id);
+  my ($mode, $c) = split(/:/, $opt);
+  my $tmp_sh = "NGS-$$.sh";
+
+  open(TMPSH, "> $tmp_sh") || die "can not write to file $tmp_sh";
+  print TMPSH "#Please execute the following commands\n";
+  foreach $t_sample_id (@NGS_samples) {
+    my %job_to_delete_ids = ();
+    if ($mode eq "jobids") {
+       %job_to_delete_ids = map {$_, 1} split(/,/,$c);
+    }
+    elsif ($mode eq "run_after") {
+      die "file $c doesn't exist!" unless (-e $c);
+      foreach $t_job_id (keys %NGS_batch_jobs) {
+        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
+        my $t_sh_file = $t_sample_job->{'sh_file'};
+        my $t_sh_pid  = "$t_sh_file.pids";
+        next unless (-e $t_sh_pid);   #### unless the job is submitted
+        #$job_to_delete_ids{$t_job_id} = 1 if (file1_same_or_after_file2( $t_sample_job->{'start_file'} , $c));
+        $job_to_delete_ids{$t_job_id} = 1 if (file1_same_or_after_file2( $t_sh_pid , $c));
+
+      }
+    }
+    else {
+      die "unknown option for deleting jobs: $opt";
+    }
+
+    # now %job_to_delete_ids are jobs need to be deleted
+    # next find all jobs that depends on them, recrusively
+    my $no_jobs_to_delete = scalar keys %job_to_delete_ids;
+    while(1) {
+      foreach $t_job_id (keys %NGS_batch_jobs) {
+        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
+        my $t_sh_file = $t_sample_job->{'sh_file'};
+        my $t_sh_pid  = "$t_sh_file.pids";
+        next unless (-e $t_sh_pid);   #### unless the job is submitted
+        my @t_injobs  = @{ $t_sample_job->{'injobs'} };
+        foreach my $t_job_id_2 (@t_injobs) {
+          $job_to_delete_ids{$t_job_id} = 1 if ($job_to_delete_ids{$t_job_id_2});
+        }
+      }
+      last if ($no_jobs_to_delete == (scalar keys %job_to_delete_ids)); #### no more depending jobs
+      $no_jobs_to_delete = scalar keys %job_to_delete_ids;
+    }
+
+    if ($no_jobs_to_delete) {
+      print TMPSH "#jobs to be deleted for $t_sample_id: ", join(",", keys %job_to_delete_ids), "\n";
+      print       "#jobs to be deleted for $t_sample_id: ", join(",", keys %job_to_delete_ids), "\n";
+      foreach $t_job_id (keys %job_to_delete_ids) {
+        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
+        my $t_sh_file = $t_sample_job->{'sh_file'};
+        my $t_sh_pid  = "$t_sh_file.pids";
+        print TMPSH "\\rm -rf $pwd/$t_sample_id/$t_job_id\n";
+        print TMPSH "\\rm $t_sh_pid\n";        
+        print TMPSH "\\rm $t_sh_file.*.std*\n";
+
+        #### find the qsub ids to be deleted 
+        my $qids = `cat $t_sh_pid`; $qids =~ s/\n/ /g; $qids =~ s/\s+/ /g;
+        print TMPSH "qdel $qids\n";
+      }
+    }
+  }
+  close(TMPSH);
+  print "The script is not delete the file, please run $tmp_sh to delete files!!!\n\n";
+}
+  '''
+#### END def task_delete_jobs()
+
+
+def run_workflow(NGS_config):
+  '''
+  major look for workflow run
+  '''
+  queue_system = NGS_config.queue_system   #### default "SGE"
+  sleep_time_min = 15
+  sleep_time_max = 120
+  sleep_time = sleep_time_min
+
+  while 1:
+    flag_job_done = True
+    ########## reset execution_submitted to 0
+    for i in NGS_config.NGS_executions.keys():
+      execution_submitted[ i ] = False
+
+    flag_qstat_xml_call = False
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      t_execution = NGS_config.NGS_executions[ t_job['execution']]
+      exe_type = t_execution['type']
+      if (queue_system == SGE) and (exe_type in ['qsub','qsub-pe']):
+        flag_qstat_xml_call = True
+
+    if flag_qstat_xml_call:
+      SGE_qstat_xml_query()
+
+  #### END while 1:
+
+ 
+  '''
   ########## check and update job status for submitted jobs
   foreach $t_job_id (keys %NGS_batch_jobs) {
     if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
@@ -646,14 +759,143 @@ EOD
   }
   write_log("sleep $sleep_time seconds");
   sleep($sleep_time);
-} ########## END  while(1) 
+  '''
+#### END def run_workflow(NGS_config)
 
-task_log_cpu();
-################################################################################
-########## END Run NGS_batch_jobs for each samples
-################################################################################
+############################################################################################
+# _______    ________  _________       ___________________   ________  .____       _________
+# \      \  /  _____/ /   _____/       \__    ___/\_____  \  \_____  \ |    |     /   _____/
+# /   |   \/   \  ___ \_____  \   ______ |    |    /   |   \  /   |   \|    |     \_____  \ 
+#/    |    \    \_\  \/        \ /_____/ |    |   /    |    \/    |    \    |___  /        \
+#\____|__  /\______  /_______  /         |____|   \_______  /\_______  /_______ \/_______  /
+#        \/        \/        \/                           \/         \/        \/        \/ 
+############################################################################################
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(formatter_class = RawTextHelpFormatter,
+                                   description     = textwrap.dedent('''\
+
+            ==================================================================
+            Workflow tools for next generation genomics, metagenomics, RNA-seq
+            and other type of omics data analyiss,
+        
+            Software originally developed since 2010 by Weizhong Li at UCSD
+                                                          currently at JCVI
+        
+            http://weizhongli-lab.org/ngomicswf           liwz@sdsc.edu
+            ==================================================================
+
+   '''))
+
+  parser.add_argument('-i', '--input',       help="workflow configration file, required", required=True)
+  parser.add_argument('-s', '--sample_file', help='''
+sample data file, required unless -S is present
+File format example:
+#Sample data file example, TAB or space delimited for following lines
+Sample_ID1 sample_data_0 sample_data_1
+Sample_ID2 sample_data_0 sample_data_1
+Sample_ID3 sample_data_0 sample_data_1
+  ''')
+  parser.add_argument('-S', '--sample_name', help='''
+sample data from command line, required unless -s is present
+format:
+Sample_ID1:sample_data_0:sample_data_0:sample_data_1,Sample_ID2:sample_data_0:sample_data_1
+  ''')
+  parser.add_argument('-t', '--parameter_file', help='''
+replace default paramters in workflow configration file
+File format example:
+#parameter file example, TAB or space delimited for following lines
+CMDOPT JobID_A:opt0:opt1:opt2
+CMDOPT JobID_B:opt0:opt1
+  ''')
+  parser.add_argument('-T', '--parameter_name', help='''
+parameter from command line
+format:
+JobID_A:opt0:opt1:opt2,JobID_B:opt0:opt1
+  ''')
+  parser.add_argument('-j', '--jobs', help='''run sub set of jobs, optional
+the workflow will run all jobs by default.
+to run sub set of jobs: -j qc or -j qc,fastqc
+  ''')
+  parser.add_argument('-J', '--task', help='''optional tasks
+write-sh: write sh files and quite
+log-cpu: gathering cpu time for each run for each sample
+list-jobs: list jobs
+snapshot: snapshot current job status
+delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
+  e.g. -J delete-jobs -Z jobids:assembly,blast  ---delete assembly,blast and all jobs depends on them
+       -J delete-jobs -Z run_after:filename     ---delete jobs that has start time (WF.start.date) after this file, and all depending jobs
+  ''')
+  parser.add_argument('-Z', '--second_parameter', help='secondary parameter used by other options, such as -J')
+  parser.add_argument('-Q', '--queye', help='queue system, e.g. PBS, SGE', default='SGE')
+
+  args = parser.parse_args()
+
+  if (args.sample_file is None) and (args.sample_name is None) :
+    parser.error('No sample file or sample name')
+
+  NGS_config = imp.load_source('NGS_config', args.input)
+
+  read_samples(args)
+  print 'Samples'
+  print NGS_samples
+  print NGS_sample_data
+
+  read_parameters(args)
+  print 'Parameters'
+  print NGS_opts
+
+  if args.jobs:
+    subset_flag = True
+    subset_jobs = re.split(',', args.jobs)
+    ## -- add_subset_jobs_by_dependency()
+    print subset_jobs
+
+  if not os.path.exists('WF-sh'):
+    os.system('mkdir WF-sh')
+
+  ## -- task_level_jobs();
+  ## -- my @NGS_batch_jobs = sort {($NGS_batch_jobs{$a}->{'job_level'} <=> $NGS_batch_jobs{$b}->{'job_level'}) or ($a cmp $b)} keys %NGS_batch_jobs;
+
+  make_job_list(NGS_config)
+
+  ## single task
+  if args.task:
+    if args.task == 'log-cpu':
+      task_log_cpu()
+      exit(0)
+    elif args.task == 'list-jobs':
+      task_list_jobs()
+      exit(0)
+    elif args.task == 'snapshot':
+      task_snapshot()
+      exit(0)
+    elif args.task == 'delete-jobs':
+      task_delete_jobs(args.second_parameter)
+      exit(0)
+    elif args.task == 'write-sh':
+      exit(0)
+    else:
+      print 'undefined task' + args.task
+      exit(1)
+
+################################################################################################
+#  _____               _   _  _____  _____  _           _       _           _       _         
+# |  __ \             | \ | |/ ____|/ ____|| |         | |     | |         (_)     | |        
+# | |__) |   _ _ __   |  \| | |  __| (___  | |__   __ _| |_ ___| |__        _  ___ | |__  ___ 
+# |  _  / | | | '_ \  | . ` | | |_ |\___ \ | '_ \ / _` | __/ __| '_ \      | |/ _ \| '_ \/ __|
+# | | \ \ |_| | | | | | |\  | |__| |____) || |_) | (_| | || (__| | | |     | | (_) | |_) \__ \
+# |_|  \_\__,_|_| |_| |_| \_|\_____|_____/ |_.__/ \__,_|\__\___|_| |_|     | |\___/|_.__/|___/
+#                                      ______                      ______ _/ |                
+#                                     |______|                    |______|__/                 
+########## Run NGS_batch_jobs for each samples http://patorjk.com/software/taag
+################################################################################################
+
+  run_workflow(NGS_config)
+  task_log_cpu()
 
 
+"""
 sub write_log {
   my @txt = @_;
   my $i;
@@ -827,34 +1069,6 @@ sub print_job_status_summary {
 ########## END print_job_status_summary
 
 
-sub validate_cmd_line {
-  my ($i, $j, $k);
-  my ($t_command, $t_sh_file, $t_sample_id) = @_;
-  my @cmds = split(/\n/,$t_command);
-
-  my @warn_path = ();
-  foreach $i (@cmds) {
-    my ($key_cmd, @opts) = split(/\s+/, $i);
-    if ($key_cmd =~ /\//) {
-      if (not -e $key_cmd) { push(@warn_path, $key_cmd); } 
-    }
-    @opts = grep {/\//} @opts;
-    foreach $j (@opts) {
-      my @opts1 = split(/,|;|>|<|\|/,$j);
-      foreach $k (@opts1) {
-        $k = "$t_sample_id/$k" unless (($k =~ /^\//) or ($k =~ /^\./));
-        if (not -e $k) { push(@warn_path, $k); }
-      }
-    }
-  }
-
-  if (@warn_path) {
-    print STDERR "File or program doesn't exist in $t_sh_file: ", join(" ", @warn_path), "\n";
-  }
-
-}
-########## END validate_cmd_line
-
 sub add_subset_jobs_by_dependency {
   my ($i, $j, $k, $ll, $t_job_id, $t_sample_id, $t_job);
 
@@ -919,84 +1133,7 @@ sub task_level_jobs {
     $NGS_batch_jobs{$t_job_id}->{"job_level"} = $job_level{$t_job_id};
   }
 }
-########## END task_list_jobs
 
-sub task_snapshot {
-  my ($t_job_id, $t_sample_id);
-  my ($i, $j, $k);
-
-  if ($this_task) {
-    my $flag_qstat_xml_call = 0;
-    foreach $t_job_id (keys %NGS_batch_jobs) {
-      my $t_job = $NGS_batch_jobs{$t_job_id};
-      my $t_execution = $NGS_executions{ $t_job->{"execution"} };
-      my $exe_type = $t_execution->{type};
-      $flag_qstat_xml_call = 1 if (($queue_system eq "SGE") and (($exe_type eq "qsub") or ($exe_type eq "qsub-pe")));
-    }
-    SGE_qstat_xml_query() if $flag_qstat_xml_call;
-
-    foreach $t_sample_id (@NGS_samples) {
-      foreach $t_job_id (keys %NGS_batch_jobs) {
-        check_submitted_job($t_job_id, $t_sample_id);
-      }
-    }
-  }
-
-  my $max_len_sample = 0;
-  foreach $t_sample_id (@NGS_samples) {
-    $max_len_sample = length($t_sample_id) if (length($t_sample_id) > $max_len_sample);
-  }
-  my $max_len_job = 0;
-  foreach $t_job_id (@NGS_batch_jobs) {
-    $max_len_job = length($t_job_id) if (length($t_job_id) > $max_len_job);
-  }
-
-  print <<EOD;
-Job status: 
-.\twait
--\tsubmitted
-r\trunning  
-+\tcompleted
-!\terror
-EOD
-
-  for ($i=$max_len_job-1; $i>=0; $i--) {
-    print ' 'x$max_len_sample, "\t";
-    foreach $t_job_id (@NGS_batch_jobs) {
-      print " ", ($i<length($t_job_id) ? substr(reverse($t_job_id), $i, 1):" ");
-    }
-    print "\n";
-  }
-
-  foreach $t_sample_id (@NGS_samples) {
-    print "$t_sample_id\t";
-    foreach $t_job_id (@NGS_batch_jobs) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      if    ($status eq "completed") { print " +";}
-      elsif ($status eq "submitted") { print " -";}
-      elsif ($status eq "running"  ) { print " r";}
-      elsif ($status eq "wait"     ) { print " .";}
-      elsif ($status eq "error"    ) { print " !";}
-      else                           { print " _";}
-    }
-    print "\n";
-  }
-}
-########## END task_snapshot
-
-sub task_list_jobs {
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id, $t_job);
-  foreach $t_job_id (@NGS_batch_jobs) {
-    $t_job = $NGS_batch_jobs{$t_job_id};
-    #my @t_infiles = @{$t_job->{"infiles"}};
-    my @t_injobs  = @{$t_job->{"injobs"}};
-
-    #print "\tInput_files:", join(",", @t_infiles) if @t_infiles;
-    print "$t_job_id\tIn_jobs:[" , join(",", @t_injobs), "]\tJob_level:$t_job->{'job_level'}\n";
-  }
-}
-########## END task_list_jobs
 
 sub file1_after_file2 {
   my ($file1, $file2) = @_;
@@ -1027,133 +1164,6 @@ sub file1_same_or_after_file2 {
 ######## END file1_after_file2
 
 
-sub task_delete_jobs {
-  my $opt = shift;
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id);
-  my ($mode, $c) = split(/:/, $opt);
-  my $tmp_sh = "NGS-$$.sh";
-
-  open(TMPSH, "> $tmp_sh") || die "can not write to file $tmp_sh";
-  print TMPSH "#Please execute the following commands\n";
-  foreach $t_sample_id (@NGS_samples) {
-    my %job_to_delete_ids = ();
-    if ($mode eq "jobids") {
-       %job_to_delete_ids = map {$_, 1} split(/,/,$c);
-    }
-    elsif ($mode eq "run_after") {
-      die "file $c doesn't exist!" unless (-e $c);
-      foreach $t_job_id (keys %NGS_batch_jobs) {
-        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-        my $t_sh_file = $t_sample_job->{'sh_file'};
-        my $t_sh_pid  = "$t_sh_file.pids";
-        next unless (-e $t_sh_pid);   #### unless the job is submitted
-        #$job_to_delete_ids{$t_job_id} = 1 if (file1_same_or_after_file2( $t_sample_job->{'start_file'} , $c));
-        $job_to_delete_ids{$t_job_id} = 1 if (file1_same_or_after_file2( $t_sh_pid , $c));
-
-      }
-    }
-    else {
-      die "unknown option for deleting jobs: $opt";
-    }
-
-    # now %job_to_delete_ids are jobs need to be deleted
-    # next find all jobs that depends on them, recrusively
-    my $no_jobs_to_delete = scalar keys %job_to_delete_ids;
-    while(1) {
-      foreach $t_job_id (keys %NGS_batch_jobs) {
-        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-        my $t_sh_file = $t_sample_job->{'sh_file'};
-        my $t_sh_pid  = "$t_sh_file.pids";
-        next unless (-e $t_sh_pid);   #### unless the job is submitted
-        my @t_injobs  = @{ $t_sample_job->{'injobs'} };
-        foreach my $t_job_id_2 (@t_injobs) {
-          $job_to_delete_ids{$t_job_id} = 1 if ($job_to_delete_ids{$t_job_id_2});
-        }
-      }
-      last if ($no_jobs_to_delete == (scalar keys %job_to_delete_ids)); #### no more depending jobs
-      $no_jobs_to_delete = scalar keys %job_to_delete_ids;
-    }
-
-    if ($no_jobs_to_delete) {
-      print TMPSH "#jobs to be deleted for $t_sample_id: ", join(",", keys %job_to_delete_ids), "\n";
-      print       "#jobs to be deleted for $t_sample_id: ", join(",", keys %job_to_delete_ids), "\n";
-      foreach $t_job_id (keys %job_to_delete_ids) {
-        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-        my $t_sh_file = $t_sample_job->{'sh_file'};
-        my $t_sh_pid  = "$t_sh_file.pids";
-        print TMPSH "\\rm -rf $pwd/$t_sample_id/$t_job_id\n";
-        print TMPSH "\\rm $t_sh_pid\n";        
-        print TMPSH "\\rm $t_sh_file.*.std*\n";
-
-        #### find the qsub ids to be deleted 
-        my $qids = `cat $t_sh_pid`; $qids =~ s/\n/ /g; $qids =~ s/\s+/ /g;
-        print TMPSH "qdel $qids\n";
-      }
-    }
-  }
-  close(TMPSH);
-  print "The script is not delete the file, please run $tmp_sh to delete files!!!\n\n";
-}
-########## END task_list_jobs
-
-sub task_log_cpu {
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id);
-
-  my %cpu_info;
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    my $t_job = $NGS_batch_jobs{$t_job_id};
-    foreach $t_sample_id (@NGS_samples) {
-
-      $cpu_info{$t_job_id}{$t_sample_id} = [$t_wall, $t_cpu];
-    }
-  }
-
-  foreach $t_sample_id (@NGS_samples) {
-    my $f_cpu = "$pwd/$t_sample_id/WF.cpu";
-    open(CPUOUT, "> $f_cpu") || die "Can not open $f_cpu";
-    print CPUOUT "#job_name\tCores\tWall(s)\tWall_time\tCPU(s)\tCPU_time\n";
-    my $min_start = 1402092131 * 999999;
-    my $max_end   = 0;
-    my $sum_cpu   = 0;
-    foreach $t_job_id (keys %NGS_batch_jobs) {
-      if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-      my $t_job = $NGS_batch_jobs{$t_job_id};
-      my $t_core     = $t_job->{"cores_per_cmd"} * $t_job->{"no_parallel"};
-
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $f_start    = $t_sample_job->{'start_file'};
-      my $f_complete = $t_sample_job->{'complete_file'};
-      my $f_cpu      = $t_sample_job->{'cpu_file'};
-      my $t_start    = `cat $f_start`;    $t_start =~ s/\s//g; $min_start = $t_start if ($t_start < $min_start);
-      my $t_end      = `cat $f_complete`; $t_end   =~ s/\s//g; $max_end   = $t_end   if ($t_end   > $max_end);
-      my $t_wall     = int($t_end - $t_start);
-         $t_wall     = 0 unless ($t_wall>0);
-
-      my $t_cpu = 0;
-      if (open(TCPU, $f_cpu)) {
-        while($ll = <TCPU>) {
-          chop($ll);
-          if ($ll =~ /^(\d+)m(\d+)/) {
-            $t_cpu += $1 * 60;
-          }
-        }
-        close(TCPU);
-      }
-      $sum_cpu += $t_cpu;
-
-      my $t_walls = time_str1($t_wall);
-      my $t_cpus  = time_str1($t_cpu);
-      print CPUOUT "$t_job_id\t$t_core\t$t_wall\t$t_walls\t$t_cpu\t$t_cpus\n";
-    }
-    my $t_wall = ($max_end - $min_start); $t_wall     = 0 unless ($t_wall>0);
-    my $t_walls = time_str1($t_wall);
-    my $sum_cpus= time_str1($sum_cpu);
-    print CPUOUT "total\t-\t$t_wall\t$t_walls\t$sum_cpu\t$sum_cpus\n";
-    close(CPUOUT);
-  }
-}
-######### END task_log_cpu
 
 sub time_str1 {
   my $s = shift;
