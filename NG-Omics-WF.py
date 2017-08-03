@@ -25,6 +25,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import math
 import subprocess
+import time
 import logging
 import textwrap
 import imp
@@ -492,274 +493,148 @@ def run_workflow(NGS_config):
     if flag_qstat_xml_call:
       SGE_qstat_xml_query()
 
+    ########## check and update job status for submitted jobs
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      if subset_flag:
+        if not subset_jobs[ t_job_id]:
+          continue
+      for t_sample_id in NGS_samples:
+        t_sample_job = job_list[t_job_id][t_sample_id]
+        if t_sample_job['status'] == 'completed':
+          continue
+
+        check_submitted_job(t_job_id, t_sample_id)
+        if t_sample_job['status'] == 'completed':
+          continue
+        flag_job_done = False
+
+    if flag_job_done:
+      ##-- write_log("job completed!")
+      break
+
+    ########## check and update job status based on dependance 
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      if subset_flag:
+        if not subset_jobs[ t_job_id]:
+          continue
+      for t_sample_id in NGS_samples:
+        t_sample_job = job_list[t_job_id][t_sample_id]
+        if t_sample_job['status'] == 'wait':
+          continue
+
+        t_ready_flag = True
+        for i in t_sample_job['infiles']:
+          if os.path.exists(i) and os.path.getsize(i) > 0:
+            continue
+          t_ready_flag = False
+          break
+
+        for i in t_sample_job['injobs']:
+          if job_list[i][t_sample_id]['status'] == 'completed':
+            continue
+          t_ready_flag = False
+          break
+
+        if t_ready_flag:
+          t_sample_job['status'] = 'ready'
+          ## -- write_log("$t_job_id,$t_sample_id: change status to ready");
+    ########## END check and update job status based on dependance 
+
+    ########## submit local sh jobs
+    has_submitted_some_jobs = False
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      if subset_flag:
+        if not subset_jobs[ t_job_id]:
+          continue
+      t_execution = NGS_config.NGS_executions[ t_job['execution']]
+      t_execution_id = t_job['execution']
+      if t_execution['type'] != 'sh': 
+        continue
+      if execution_submitted[t_execution_id] >= t_execution['cores_per_node']:
+        continue
+      for t_sample_id in NGS_samples:
+        t_sample_job = job_list[t_job_id][t_sample_id]
+        if t_sample_job['status'] != 'ready':
+          continue
+        if (execution_submitted[t_execution_id] + t_job['cores_per_cmd'] * t_job['no_parallel']) > \
+            t_execution['cores_per_node']: #### no enough available cores
+          continue
+
+        #### now submitting 
+        pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
+        for i in range(0, t_job['no_parallel']):
+          p = subprocess.Popen(['/bin/bash', t_sample_job['sh_file']], shell=True)
+          pid_file.write(str(p.pid))
+        pid_file.close()
+        t_sample_job['status'] = 'submitted'
+        ## -- write_log("$t_job_id,$t_sample_id: change status to submitted");
+        execution_submitted[ t_execution_id ] += t_job['cores_per_cmd'] * t_job['no_parallel'] 
+        has_submitted_some_jobs = True
+    ########## END submit local sh jobs
+
+    ########## submit qsub-pe jobs, multiple jobs may share same node
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      if subset_flag:
+        if not subset_jobs[ t_job_id]:
+          continue
+      t_execution = NGS_config.NGS_executions[ t_job['execution']]
+      t_execution_id = t_job['execution']
+
+      if t_execution['type'] != 'qsub-pe':
+        continue
+      if execution_submitted[t_execution_id] >= t_execution['number_nodes']:
+        continue
+      t_cores_per_node = t_execution['cores_per_node']
+      t_cores_per_cmd  = t_job['cores_per_cmd']
+      t_cores_per_job  = t_cores_per_cmd * t_job['no_parallel']
+      t_nodes_per_job  = t_cores_per_job / t_cores_per_node
+
+      for t_sample_id in NGS_samples:
+        t_sample_job = job_list[t_job_id][t_sample_id]
+        if t_sample_job['status'] != 'ready':
+          continue
+
+        #### now submitting 
+        pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
+        for i in range(0, t_job['no_parallel']):
+          t_stderr = t_sample_job['sh_file'] + '.' + str(i) + '.stderr'
+          t_stdout = t_sample_job['sh_file'] + '.' + str(i) + '.stdout'
+
+          command_line = 'qsub {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
+                                                               t_execution['command_err_opt'], t_stderr, 
+                                                               t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])
+          cmd = subprocess.check_output([command_line], shell=True)
+          if re.search('\d+', cmd):
+            pid = re.search('\d+', cmd).group(0)
+            pid_file.write(pid)
+          else:
+            print 'error submitting jobs'
+            exit(1)
+          execution_submitted[t_execution_id] += t_nodes_per_job
+          ## -- write_log("$t_sh_bundle submitted for sample $t_sample_id, qsubid $cmd");
+
+        pid_file.close()
+        t_sample_job['status'] = 'submitted'
+        has_submitted_some_jobs = True
+    ########## END submit qsub-pe jobs, multiple jobs may share same node
+   
+    ########## submit qsub jobs, job bundles disabled here, if need, check the original Perl script
+
+    #### if has submitted some jobs, reset waiting time, otherwise double waiting time
+    print_job_status_summary()
+    if has_submitted_some_jobs:
+      sleep_time = sleep_time_min
+    else:
+      sleep_time  *= 2
+      if sleep_time > sleep_time_max:
+        sleep_time = sleep_time_max
+    ## --write_log("sleep $sleep_time seconds");
+    time.sleep(sleep_time);
   #### END while 1:
-
- 
-  '''
-  ########## check and update job status for submitted jobs
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    my $t_job = $NGS_batch_jobs{$t_job_id};
-    foreach $t_sample_id (@NGS_samples) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-
-      next if ($status eq "completed");
-      ########## check file system to update job status
-      ########## in case this is a restart run
-      check_submitted_job($t_job_id, $t_sample_id);
-      next if ($t_sample_job->{'status'} eq "completed");
-      $flag_job_done = 0;
-    }
-  }
-
-  if ($flag_job_done) { write_log("job completed!"); last; }
-
-  ########## check and update job status based on dependance 
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    my $t_job = $NGS_batch_jobs{$t_job_id};
-    foreach $t_sample_id (@NGS_samples) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-
-      next unless ($status eq "wait");
-      my @t_infiles = @{ $t_sample_job->{'infiles'} };
-      my @t_injobs  = @{ $t_sample_job->{'injobs'} };
-      my $t_ready_flag = 1;
-
-      foreach $i (@t_infiles) {
-        next if (-s $i); ####  non-zero size file
-        $t_ready_flag = 0;
-        last;
-      }
-
-      foreach $i (@t_injobs) {
-        next if ( $job_list{$i}{$t_sample_id}->{'status'} eq "completed"); #### injob completed
-        $t_ready_flag = 0;
-        last;
-      }
-      if ($t_ready_flag) {
-        $t_sample_job->{"status"} = "ready";
-        write_log("$t_job_id,$t_sample_id: change status to ready");
-      }
-    }
-  }
-
-  ########## submit local sh jobs
-  my $has_submitted_some_jobs = 0;
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    my $t_job = $NGS_batch_jobs{$t_job_id};
-    my $t_execution = $NGS_executions{ $t_job->{"execution"} };
-    my $t_execution_id = $t_job->{"execution"};
-
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    next unless ($t_execution->{'type'} eq "sh");
-    next if ( $execution_submitted{$t_execution_id} >= $t_execution->{"cores_per_node"} ); #### all cores are used
-
-    foreach $t_sample_id (@NGS_samples) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      next unless ($status eq "ready");
-      next if ( ($execution_submitted{$t_execution_id} + $t_job->{"cores_per_cmd"} * $t_job->{"no_parallel"}) > $t_execution->{"cores_per_node"} ); #### no enough available cores
-      #### now submitting 
-
-      my $t_sh_file = $t_sample_job->{'sh_file'};
-      my $t_sh_pid  = "$t_sh_file.pids";
-      for ($i=0; $i<$t_job->{"no_parallel"}; $i++) {
-        $cmd = `sh $t_sh_file >/dev/null 2>&1 &`;
-      }
-      $cmd = `touch $t_sh_pid`;
-      $t_sample_job->{'status'} = "submitted";
-      write_log("$t_job_id,$t_sample_id: change status to submitted");
-      $execution_submitted{ $t_execution_id } += $t_job->{"cores_per_cmd"} * $t_job->{"no_parallel"}; 
-      $has_submitted_some_jobs = 1;
-    }
-  }
-
-  ########## submit qsub-pe jobs, multiple jobs may share same node
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    my $t_job = $NGS_batch_jobs{$t_job_id};
-    my $t_execution = $NGS_executions{ $t_job->{"execution"} };
-    my $t_execution_id = $t_job->{"execution"};
-
-    next unless ($t_execution->{'type'} eq "qsub-pe");
-    next if ( $execution_submitted{$t_execution_id} >= $t_execution->{"number_nodes"} ); #### resource full
-
-    my $t_cores_per_node = $t_execution->{"cores_per_node"};
-    my $t_cores_per_cmd  = $t_job->{"cores_per_cmd"};
-    my $t_cores_per_job  = $t_cores_per_cmd * $t_job->{"no_parallel"};
-    my $t_nodes_per_job  = $t_cores_per_job / $t_cores_per_node;
-
-    foreach $t_sample_id (@NGS_samples) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      next unless ($status eq "ready");
-
-      my $t_sh_file = $t_sample_job->{'sh_file'};
-      my $t_sh_pid  = "$t_sh_file.pids";
-      open(TID, "> $t_sh_pid")    || die "can not write to $t_sh_pid";
-
-      for ($i=0; $i<$t_job->{"no_parallel"}; $i++) {
-        my $t_stderr = "$t_sh_file.$i.stderr";
-        my $t_stdout = "$t_sh_file.$i.stdout";
-        $cmd = `qsub $t_execution->{"command_name_opt"} $t_job_id $t_execution->{"command_err_opt"} $t_stderr $t_execution->{"command_out_opt"} $t_stdout $t_sh_file 2>$log_fileq`;
-        my $qsub_id = 0;
-        if ($cmd =~ /(\d+)/) { $qsub_id = $1;} else {die "can not submit qsub job and return a id\n";}
-        print TID "$qsub_id\n"; #### $cmd returns qsub id, write these ids to pid file for future qstat 
-        $execution_submitted{$t_execution_id} += $t_nodes_per_job;
-        write_log("$t_sh_bundle submitted for sample $t_sample_id, qsubid $cmd");
-      }
-
-      close(TID);
-      $has_submitted_some_jobs = 1;
-      $t_sample_job->{'status'} = "submitted";
-    }
-  } ########## END foreach $t_job_id (keys %NGS_batch_jobs) 
-
-  ########## submit qsub jobs
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    my $t_job = $NGS_batch_jobs{$t_job_id};
-    my $t_execution = $NGS_executions{ $t_job->{"execution"} };
-    my $t_execution_id = $t_job->{"execution"};
-
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    next unless ($t_execution->{'type'} eq "qsub");
-    next if ( $execution_submitted{$t_execution_id} >= $t_execution->{"number_nodes"} ); #### resource full
-
-    my $t_cores_per_node = $t_execution->{"cores_per_node"};
-    my $t_cores_per_cmd  = $t_job->{"cores_per_cmd"};
-    my $t_cores_per_job  = $t_cores_per_cmd * $t_job->{"no_parallel"};
-    my $t_nodes_per_job  = POSIX::ceil($t_cores_per_job / $t_cores_per_node);
-    my $t_cmds_per_node  = int($t_cores_per_node / $t_cores_per_cmd);
-    my $t_jobs_per_node  = int($t_cores_per_node / $t_cores_per_job);
-
-    ########## 1. this loop process jobs need 1 or more nodes per sample, ie. bundle within a sample, e.g. blast against refseq
-    foreach $t_sample_id (@NGS_samples) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      next unless ($status eq "ready");
-      next unless ($t_jobs_per_node <= 1);                 #### unless need >= 1 node, including jobs use between (51%-100%) cores per node
-      last if ( ($execution_submitted{$t_execution_id} + $t_nodes_per_job) > $t_execution->{"number_nodes"}); #### no enough available queues
-
-      my $t_sh_file = $t_sample_job->{'sh_file'};
-      my $t_sh_bundle = "$sh_bundle_dir/$t_job_id.$t_sample_id.$$.sh";
-      my $t_stderr    = "$t_sh_bundle.stderr";
-      my $t_stdout    = "$t_sh_bundle.stdout";
-      my $t_sh_pid  = "$t_sh_file.pids";
-
-      open(TID, "> $t_sh_pid")    || die "can not write to $t_sh_pid";
-      open(BSH, "> $t_sh_bundle") || die "can not write to $t_sh_bundle";
-      print BSH <<EOD;
-$t_execution->{"template"}
-cd $pwd
-EOD
-      for ($i=0; $i<$t_cmds_per_node; $i++) {
-        print BSH "sh $t_sh_file &\n";
-        print BSH "sleep 3\n";
-      }
-      print BSH "wait\n";
-      close(BSH);
-
-      for ($i=0; $i<$t_nodes_per_job; $i++) {
-        $cmd = `qsub $t_execution->{"command_name_opt"} $t_job_id $t_execution->{"command_err_opt"} $t_stderr $t_execution->{"command_out_opt"} $t_stdout $t_sh_bundle 2>$log_fileq`;
-        my $qsub_id = 0;
-        if ($cmd =~ /(\d+)/) { $qsub_id = $1;} else {die "can not submit qsub job and return a id\n";}
-        print TID "$qsub_id\n"; #### $cmd returns qsub id, write these ids to pid file for future qstat 
-        $execution_submitted{$t_execution_id}++;
-        write_log("$t_sh_bundle submitted for sample $t_sample_id, qsubid $cmd");
-      }
-      close(TID);
-      $has_submitted_some_jobs = 1;
-      $t_sample_job->{'status'} = "submitted";
-    } ########## END foreach $t_sample_id (@NGS_samples) 
-
-
-    ########## 2. this loop process jobs need less than 1 node per sample, ie. bundle jobs across samples, e.g. qc 
-    my @t_bundle = ();
-    my $available_nodes = $t_execution->{"number_nodes"} - $execution_submitted{$t_execution_id};
-    my $no_sample_can_be_processed = $available_nodes * $t_jobs_per_node;
-    my @t_samples = ();
-    my $t_batch_no = 0;
-
-    foreach $t_sample_id (@NGS_samples) { #### same loop as next, to find out @t_samples and last sample can run
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      next unless ($status eq "ready");
-      next unless ($t_jobs_per_node > 1);              #### unless a node can host 2 or more jobs
-      last if ( $t_execution->{"number_nodes"} - $execution_submitted{$t_execution_id} <=0);
-      push(@t_samples, $t_sample_id);
-    }
-    my $last_sample_can_run = $t_samples[-1];
-    @t_samples = ();
-
-    foreach $t_sample_id (@NGS_samples) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      next unless ($status eq "ready");
-      next unless ($t_jobs_per_node > 1);              #### unless a node can host 2 or more jobs
-      last if ( $t_execution->{"number_nodes"} - $execution_submitted{$t_execution_id} <=0);
-      push(@t_samples, $t_sample_id);
-
-      #### bundle @t_samples to one qsub job
-      if ((($#t_samples+1) == $t_jobs_per_node) or ($t_sample_id eq $last_sample_can_run)) {
-        my $t_sh_bundle = "$sh_bundle_dir/$t_job_id.samples-$t_batch_no.$$.sh";
-        my $t_stderr    = "$t_sh_bundle.stderr";
-        my $t_stdout    = "$t_sh_bundle.stdout";
-
-        open(BSH, "> $t_sh_bundle") || die "can not write to $t_sh_bundle";
-      print BSH <<EOD;
-$t_execution->{"template"}
-cd $pwd
-EOD
-        foreach $i (@t_samples) {
-          my $t_sh_file = $job_list{$t_job_id}{$i}->{'sh_file'};
-          for ($j=0; $j<$t_job->{"no_parallel"}; $j++) {
-            print BSH "sh $t_sh_file &\n";
-            print BSH "sleep 3\n";
-          }
-        }
-        print BSH "wait\n";
-        close(BSH);
-
-        $cmd = `qsub $t_execution->{"command_name_opt"} $t_job_id $t_execution->{"command_err_opt"} $t_stderr $t_execution->{"command_out_opt"} $t_stdout $t_sh_bundle 2>$log_fileq`;
-        my $qsub_id = 0;
-        if ($cmd =~ /(\d+)/) { $qsub_id = $1;} else {die "can not submit qsub job and return a id\n";}
-
-        foreach $i (@t_samples) {
-          my $t_sh_file = $job_list{$t_job_id}{$i}->{'sh_file'};
-          my $t_sh_pid  = "$t_sh_file.pids";
-          open(TID, "> $t_sh_pid")    || die "can not write to $t_sh_pid";
-          print TID "$qsub_id\n"; #### $cmd returns qsub id, write these ids to pid file for future qstat 
-          write_log("$t_sh_bundle submitted for sample $i, qsubid $cmd");
-          close(TID);
-          $job_list{$t_job_id}{$i}->{'status'} = "submitted";
-        }
-
-        $has_submitted_some_jobs = 1;
-        $execution_submitted{$t_execution_id}++;
-        @t_samples = (); #### clear
-        $t_batch_no++;
-      }
-    } ########## END foreach $t_sample_id (@NGS_samples)
-  } ########## END foreach $t_job_id (keys %NGS_batch_jobs) 
-
-
-  #### if has submitted some jobs, reset waiting time, otherwise double waiting time
-  print_job_status_summary();
-  if ($has_submitted_some_jobs) {
-    $sleep_time = $sleep_time_min;
-  }
-  else {
-    $sleep_time = $sleep_time*2;
-    $sleep_time = $sleep_time_max if ($sleep_time > $sleep_time_max);
-  }
-  write_log("sleep $sleep_time seconds");
-  sleep($sleep_time);
-  '''
 #### END def run_workflow(NGS_config)
 
 ############################################################################################
