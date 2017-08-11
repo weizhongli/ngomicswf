@@ -30,6 +30,7 @@ import logging
 import textwrap
 import imp
 import collections
+import xml.etree.ElementTree as ET
 
 # import numpy as np
 # import pandas as pd
@@ -45,10 +46,15 @@ NGS_opts = {}
 pwd = os.path.abspath('.')
 subset_flag = False
 subset_jobs = []
-qstat_xml_data = {}
+qstat_xml_data = collections.defaultdict(dict)
 job_list = collections.defaultdict(dict)  # as job_list[$t_job_id][$t_sample_id] = {}
 execution_submitted = {}                  # number of submitted jobs (qsub) or threads (local sh)
 ############## END Global variables
+
+def fatal_error(message, exit_code=1):
+  print message
+  exit(exit_code)
+
 
 def read_parameters(args):
   """
@@ -70,13 +76,13 @@ def read_parameters(args):
         NGS_opts[ ll[0] ] = ll[1:]
       f.close()
     except IOError:
-      print 'cannot open', args.parameter_file
-      exit(1)
+      fatal_error('cannot open ' + args.parameter_file, exit_code=1)
 
   elif args.parameter_name:
     for line in re.split(',', args.parameter_name):
       ll = re.split(':', line);
       NGS_opts[ ll[0] ] = ll[1:]
+
 
 def read_samples(args):
   """
@@ -95,8 +101,7 @@ def read_samples(args):
         NGS_sample_data[ ll[0] ] = ll[1:]
       f.close()
     except IOError:
-      print 'cannot open', args.sample_file
-      exit(1) 
+      fatal_error('cannot open ' + args.sample_file, exit_code=1)
 
   elif args.sample_name:
     for line in re.split(',', args.sample_name):
@@ -104,19 +109,18 @@ def read_samples(args):
       NGS_samples.append(ll[0]);
       NGS_sample_data[ ll[0] ] = ll[1:]
   else:
-    exit(1)
+    fatal_error('no input sample', exit_code=1)
 
   for sample in NGS_samples:
     if os.path.exists(sample):
       if os.path.isdir(sample):
         pass
       else:
-        print 'file exist:', sample
-        exit(1)
+        fatal_error('file exist: ' + sample, exit_code=1)
     else:
       if os.system("mkdir " + sample):
-        print 'can not mkdir:', sample
-        exit(1)
+        fatal_error('can not mkdir: ' + sample, exit_code=1)
+
        
 def make_job_list(NGS_config):
   '''
@@ -141,18 +145,14 @@ def make_job_list(NGS_config):
       pe_parameter = "#$ -pe orte " + str(t_cores_per_cmd)
 
     if t_job[ 'cores_per_cmd' ] > t_execution[ 'cores_per_node' ]:
-      print 'not enough cores'
-      print t_job
-      exit(1)
+      fatal_error('not enough cores ' + t_job, exit_code=1)
       ## -- write_log("$t_job_id needs $t_job->{\"cores_per_cmd\"} cores, but $t_job->{\"execution\"} only has $t_execution->{\"cores_per_node\"} cores");
 
     t_job[ 'cmds_per_node' ] = t_execution[ 'cores_per_node' ] / t_job[ 'cores_per_cmd' ]
     t_job[ 'nodes_total' ] = math.ceil( t_job[ 'no_parallel' ] / float(t_job[ 'cmds_per_node' ]))
  
     if t_job[ 'nodes_total' ] > t_execution[ 'number_nodes' ]:
-      print 'not enough nodes'
-      print t_job
-      exit(1)
+      fatal_error('not enough nodes ' + t_job, exit_code=1)
       ## -- write_log("$t_job_id needs $t_job->{\"nodes_total\"} nodes, but $t_job->{\"execution\"} only has $t_execution->{\"number_nodes\"} nodes");
 
     CMD_opts = []
@@ -239,17 +239,12 @@ echo "sample={5} job={6} host=$my_host pid=$my_pid queue=$my_queue cores=$my_cor
 '''.format(t_execution['template'], pe_parameter, t_job['cores_per_cmd'], t_job['execution'], pwd, t_sample_id, t_job_id, f_start, t_command, v_command, f_complete, f_cpu ))
           tsh.close()
         except IOError:
-          print 'cannot write to', job_list[ 't_job_id' ][ 't_sample_id' ][ 'sh_file' ]
-          exit(1)
+          fatal_error('cannot write to ' + job_list[ 't_job_id' ][ 't_sample_id' ][ 'sh_file' ], exit_code=1)
 ### END def make_job_list(NGS_config):
 
 
-
-def task_log_cpu():
+def task_log_cpu(NGS_config):
   '''
-sub task_log_cpu {
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id);
-
   my %cpu_info;
   foreach $t_job_id (keys %NGS_batch_jobs) {
     if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
@@ -303,36 +298,26 @@ sub task_log_cpu {
     print CPUOUT "total\t-\t$t_wall\t$t_walls\t$sum_cpu\t$sum_cpus\n";
     close(CPUOUT);
   }
-}
-######### END task_log_cpu
   '''
 #### END def task_log_cpu():
 
 
-def task_list_jobs():
-  '''
-sub task_list_jobs {
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id, $t_job);
-  foreach $t_job_id (@NGS_batch_jobs) {
-    $t_job = $NGS_batch_jobs{$t_job_id};
-    #my @t_infiles = @{$t_job->{"infiles"}};
-    my @t_injobs  = @{$t_job->{"injobs"}};
+def task_list_jobs(NGS_config):
+  for t_job_id in NGS_config.NGS_batch_jobs.keys():
+    t_job = NGS_config.NGS_batch_jobs[t_job_id]
 
-    #print "\tInput_files:", join(",", @t_infiles) if @t_infiles;
-    print "$t_job_id\tIn_jobs:[" , join(",", @t_injobs), "]\tJob_level:$t_job->{'job_level'}\n";
-  }
-}
-########## END task_list_jobs
-  '''
-#### END def task_list_jobs()
+    t_injobs = []
+    if 'injobs' in t_job.keys():
+      t_injobs  = t_job['injobs']
+    print '{0}\tIn_jobs:[ {1} ]\tJob_level:{2}\n'.format(t_job_id, ','.join(t_injobs), t_job['job_level'] )
 
-def task_snapshot():
-  '''
-sub task_snapshot {
-  my ($t_job_id, $t_sample_id);
-  my ($i, $j, $k);
 
-  if ($this_task) {
+def task_snapshot(NGS_config):
+  '''
+  print job status
+  '''
+
+  if this_task:
     my $flag_qstat_xml_call = 0;
     foreach $t_job_id (keys %NGS_batch_jobs) {
       my $t_job = $NGS_batch_jobs{$t_job_id};
@@ -347,7 +332,8 @@ sub task_snapshot {
         check_submitted_job($t_job_id, $t_sample_id);
       }
     }
-  }
+
+  '''
 
   my $max_len_sample = 0;
   foreach $t_sample_id (@NGS_samples) {
@@ -389,10 +375,9 @@ EOD
     }
     print "\n";
   }
-}
-########## END task_snapshot
   '''
 ### def task_snapshot():
+
 
 def task_delete_jobs():
   '''
@@ -465,6 +450,29 @@ sub task_delete_jobs {
 }
   '''
 #### END def task_delete_jobs()
+
+
+def SGE_qstat_xml_query():
+  '''
+  run qstat -f -xml and get xml tree
+  '''
+
+  qstat_xml_data = collections.defaultdict(dict)
+  t_out = ''
+  try:
+    t_out  = subprocess.check_output(['qstat -f -xml'], shell=True)
+  except:
+    fatal_error("can not run qstat", exit_code=1)
+
+  qstat_xml = ET.fromstring(t_out)
+  qstat_xml_root = qstat_xml.getroot()
+  for job_list in qstat_xml_root.iter('job_list'):
+    job_id    = job_list.find('JB_job_number').text
+    job_name  = job_list.find('JB_name').text
+    job_state = job_list.find('state').text
+    qstat_xml_data[job_id] = [job_name, job_state]
+
+#### END def SGE_qstat_xml_query()
 
 
 def run_workflow(NGS_config):
@@ -612,8 +620,7 @@ def run_workflow(NGS_config):
             pid = re.search('\d+', cmd).group(0)
             pid_file.write(pid)
           else:
-            print 'error submitting jobs'
-            exit(1)
+            fatal_error('error submitting jobs')
           execution_submitted[t_execution_id] += t_nodes_per_job
           ## -- write_log("$t_sh_bundle submitted for sample $t_sample_id, qsubid $cmd");
 
@@ -636,6 +643,113 @@ def run_workflow(NGS_config):
     time.sleep(sleep_time);
   #### END while 1:
 #### END def run_workflow(NGS_config)
+
+
+def check_pid(pid):        
+  '''Check For the existence of a unix pid. '''
+  try:
+    os.kill(pid, 0)
+  except OSError:
+    return False
+  else:
+    return True
+
+
+def check_any_pids(pids):
+  '''Check For the existence of a list of unix pids. return True if any one exist'''
+  for pid in pids:
+    if check_pid(pid):
+      return True
+
+
+def check_qsub_pid(pid):
+  '''Check For the existence of a qsub pid. '''
+  if ((queue_system == 'SGE') and %qstat_xml_data):
+    if defined(qstat_xml_data[i]): 
+##      t_sample_job['status'] = 'running' if ((qstat_xml_data[i]->[1] == 'r') and (t_sample_job->['status'] == 'submitted'))
+##       finish_flag = 0
+##       execution_submitted[ t_job{'execution'] } ++
+      
+
+def check_any_qsub_pids(pids):
+  '''Check For the existence of a list of qsub pids. return True if any one exist'''
+  for pid in pids:
+    if check_qsub_pid(pid):
+      return True
+
+
+#### def check_submitted_job()
+def check_submitted_job(NGS_config, t_job_id, t_sample_id):
+  '''
+  check submitted jobs by checking pids or qsub ids
+  update job status from wait|ready -> submitted if pid file exit (in case of restart of this script)
+  update job status from wait|ready|submitted -> completed if sh calls or qsub calls finished
+  '''
+  t_sample_job = job_list[t_job_id][t_sample_id]
+  t_job = NGS_config.NGS_batch_jobs[t_job_id]
+  t_execution = NGS_config.NGS_executions[ t_job['execution']]
+
+  t_sh_pid = t_sample_job['sh_file'] + '.pids'
+  if not os.path.exists(t_sh_pid):
+    return
+
+  status = t_sample_job['status']
+  if ((status == 'wait') or (status == 'ready')):
+    t_sample_job['status'] = 'submitted'
+    ## write_log('t_job_id,t_sample_id: change status to submitted')
+
+  pids = [] #### either pids, or qsub ids
+  try:
+    f = open(open(t_sh_pid, 'r')
+    pids = f.readlines()
+    f.close()
+    pids = [x.strip() for x in pids]
+  except IOError:
+    fatal_error('cannot open ' + t_sh_pid, exit_code=1)
+
+  if len(pids) == 0:
+    fatal_error('empty file ' + t_sh_pid, exit_code=1)
+  
+  exe_type = t_execution['type']
+  if (exe_type == 'sh'):
+    if check_any_pids(pids):    #### still running
+      execution_submitted[ t_job{'execution'] } += t_job->['cores_per_cmd'] * t_job->['no_parallel']
+    elif validate_job_files(t_job_id, t_sample_id):                       #### job finished
+      t_sample_job['status'] = 'completed'
+      ## -- write_log('t_job_id,t_sample_id: change status to completed')
+    else:
+      t_sample_job['status'] = 'error'
+      ## -- write_log('t_job_id,t_sample_id: change status to error')
+    return
+  elif ((exe_type == 'qsub') or (exe_type == 'qsub-pe')):
+    if check_any_qsub_pids(pids):    #### still running
+      pass
+    elif validate_job_files(t_job_id, t_sample_id):                       #### job finished
+      t_sample_job['status'] = 'completed'
+      ## -- write_log('t_job_id,t_sample_id: change status to completed')
+    else:
+      t_sample_job['status'] = 'error'
+      ## -- write_log('t_job_id,t_sample_id: change status to error')
+  else:
+    fatal_error('unknown execution type: '+ exe_type, exit_code=1)
+
+#### END def check_submitted_job()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ############################################################################################
 # _______    ________  _________       ___________________   ________  .____       _________
@@ -737,13 +851,13 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
   ## single task
   if args.task:
     if args.task == 'log-cpu':
-      task_log_cpu()
+      task_log_cpu(NGS_config)
       exit(0)
     elif args.task == 'list-jobs':
-      task_list_jobs()
+      task_list_jobs(NGS_config)
       exit(0)
     elif args.task == 'snapshot':
-      task_snapshot()
+      task_snapshot(NGS_config)
       exit(0)
     elif args.task == 'delete-jobs':
       task_delete_jobs(args.second_parameter)
@@ -751,8 +865,7 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
     elif args.task == 'write-sh':
       exit(0)
     else:
-      print 'undefined task' + args.task
-      exit(1)
+      fatal_error('undefined task' + args.task, exit_code=1)
 
 ################################################################################################
 #  _____               _   _  _____  _____  _           _       _           _       _         
@@ -767,7 +880,7 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
 ################################################################################################
 
   run_workflow(NGS_config)
-  task_log_cpu()
+  task_log_cpu(NGS_config)
 
 
 """
@@ -783,126 +896,6 @@ sub write_log {
   print STDERR "\n";
 }
 ########## END write_log
-
-sub SGE_qstat_xml_query {
-  my ($i, $j, $k, $cmd, $ll);
-  %qstat_xml_data = (); #### global
-  $cmd = `qstat -f -xml`;
-  if ($cmd =~ /<queue_info/) { #### dummy 
-    $qstat_xml_data{"NULL"}= ["NULL","NULL"];
-  }
-
-  my @lls = split(/\n/, $cmd);
-  $i = 2; #### skip first 2 lines
-  for (;     $i<$#lls+1; $i++) {
-    if ($lls[$i] =~ /<job_list/) {
-      my ($id, $name, $state);
-      for (; $i<$#lls+1; $i++) {
-        last if ($lls[$i] =~ /<\/job_list/);
-        if ($lls[$i] =~ /<JB_job_number>(\d+)/) {  $id = $1;}
-        if ($lls[$i] =~ /<JB_name>([^<]+)/) { $name = $1;}
-        if ($lls[$i] =~ /<state>([^<]+)/) {$state = $1;}
-      }
-      if (defined($id) and defined($name) and defined($state)) {
-        $qstat_xml_data{$id} = [$name, $state];
-      }
-    }
-  }
-}
-
-########## check submitted job by checking pids, or qsub ids
-########## update job status from wait|ready -> submitted if pid file exit (in case of restart of this script)
-########## update job status from wait|ready|submitted -> completed if sh calls or qsub calls finished
-##########    these pids or qsub ids are done
-sub check_submitted_job {
-  my ($t_job_id, $t_sample_id) = @_;
-  my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-  my $t_job = $NGS_batch_jobs{$t_job_id};
-  my $t_execution = $NGS_executions{ $t_job->{"execution"} };
-
-  my ($i, $j, $k, $flag, $ll, $cmd);
-
-  my $t_sh_file = $t_sample_job->{'sh_file'};
-  my $t_sh_pid  = "$t_sh_file.pids";
-
-  # status won't change unless there is a pid file
-  return unless (-e $t_sh_pid);
-
-  my $status = $t_sample_job->{'status'};
-  if (($status eq "wait") or ($status eq "ready")) {
-    $t_sample_job->{'status'} = "submitted";
-    write_log("$t_job_id,$t_sample_id: change status to submitted");
-  }
-
-  my $exe_type = $t_execution->{type};
-
-  if ($exe_type eq "sh") {
-    $cmd = `ps -ef | grep "$t_sh_file" | grep -v grep`;
-    if ($cmd =~ /\w/) { # still running 
-      $execution_submitted{ $t_job->{"execution"} } += $t_job->{"cores_per_cmd"} * $t_job->{"no_parallel"};
-    }
-    elsif (validate_job_files($t_job_id, $t_sample_id)) {
-      $t_sample_job->{'status'} = "completed";
-      write_log("$t_job_id,$t_sample_id: change status to completed");
-    }
-    else {
-      $t_sample_job->{'status'} = "error";
-      write_log("$t_job_id,$t_sample_id: change status to error");
-    }
-    return;
-  }
-  elsif (($exe_type eq "qsub") or ($exe_type eq "qsub-pe")) {
-    my @pids = ();
-    open(CHECK, $t_sh_pid) || die "Can not open $t_sh_pid\n";
-    while($ll = <CHECK>) {
-      chop($ll); next unless ($ll =~ /\w/);
-      push(@pids, $ll);
-    }
-    close(CHECK);
-
-    my $finish_flag = 1;
-    foreach $i (@pids) {
-      if (($queue_system eq "SGE") and %qstat_xml_data) {
-        if (defined($qstat_xml_data{$i})) {
-          $t_sample_job->{'status'} = "running" if (($qstat_xml_data{$i}->[1] eq "r") and ($t_sample_job->{'status'} eq "submitted"));
-          $finish_flag = 0;
-          $execution_submitted{ $t_job->{"execution"} } ++; 
-        }
-      }
-      elsif ($queue_system eq "SGE") {
-        $cmd = `qstat -j $i | grep job_number`;
-        if ($cmd =~ /$i/) {
-          $finish_flag = 0;
-          $execution_submitted{ $t_job->{"execution"} } ++; 
-        }
-      }
-      else {
-        $cmd = `qstat -r $i | grep $i`;
-        $j = (split(/\D/,$cmd))[0];
-        if ($j == $i) { # this job is running
-          $finish_flag = 0;
-          $execution_submitted{ $t_job->{"execution"} } ++; 
-        }
-      }
-    }
-    if ($finish_flag == 1) {
-      if (validate_job_files($t_job_id, $t_sample_id)) {
-        $t_sample_job->{'status'} = "completed";
-        write_log("$t_job_id,$t_sample_id: change status to completed");
-      }
-      else {
-        $t_sample_job->{'status'} = "error";
-        write_log("$t_job_id,$t_sample_id: change status to error");
-      }
-    }
-    return;
-  }
-  else {
-    die "unknown execution type: $exe_type\n";
-  }
-}
-########## END sub check_submitted_job 
-
 
 # WF.start.date and WF.complete.date need to have non-zero size
 sub validate_job_files {
