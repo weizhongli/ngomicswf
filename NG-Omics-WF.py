@@ -121,6 +121,58 @@ def read_samples(args):
       if os.system("mkdir " + sample):
         fatal_error('can not mkdir: ' + sample, exit_code=1)
 
+def task_level_jobs(NGS_config):
+  '''
+  according to dependancy, make level of jobs
+  '''
+  job_level = {}
+  while True:
+    change_flag = False
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      t_injobs = t_job['injobs']
+
+      if len(t_injobs) > 0:
+        max_level_injob = 1
+        for j in t_injobs:
+          if not j in job_level.keys():
+            continue
+            if job_level[j] > max_level_injob:
+              max_level_injob = job_level[j]
+        if max_level_injob == 1:
+          continue
+        max_level_injob +=1  #### one more level 
+        if (t_job_id in job_level.keys()) and (job_level[t_job_id] >= max_level_injob):
+          continue
+        job_level[t_job_id]=max_level_injob
+        change_flag = 1
+      else:
+        if not t_job_id in job_level.keys():
+          job_level[t_job_id]=1
+          change_flag = True
+
+    if not change_flag:
+      break
+
+  for t_job_id in NGS_config.NGS_batch_jobs.keys():
+    NGS_config.NGS_batch_jobs[t_job_id]['job_level'] = job_level[t_job_id]
+      
+#### END task_level_jobs(NGS_config)
+
+
+def add_subset_jobs_by_dependency(NGS_config):
+  '''add dependant jobs'''
+  while True:
+    num_subset_jobs = len(subset_jobs)
+    for t_job_id in subset_jobs:
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      for j in t_job['injobs']:
+        if not (j in subset_jobs):
+          subset_jobs.append(j)
+    if num_subset_jobs == len(subset_jobs):
+      break
+#### END add_subset_jobs_by_dependency()
+
        
 def make_job_list(NGS_config):
   '''
@@ -317,6 +369,7 @@ def task_snapshot(NGS_config):
   print job status
   '''
 
+  '''
   if this_task:
     my $flag_qstat_xml_call = 0;
     foreach $t_job_id (keys %NGS_batch_jobs) {
@@ -333,7 +386,6 @@ def task_snapshot(NGS_config):
       }
     }
 
-  '''
 
   my $max_len_sample = 0;
   foreach $t_sample_id (@NGS_samples) {
@@ -473,6 +525,26 @@ def SGE_qstat_xml_query():
     qstat_xml_data[job_id] = [job_name, job_state]
 
 #### END def SGE_qstat_xml_query()
+
+
+def print_job_status_summary(NGS_config):
+  '''print jobs status'''
+  job_status = ()
+  job_total = 0
+
+  for t_job_id in NGS_config.NGS_batch_jobs.keys():
+    if subset_flag:
+      if not subset_jobs[t_job_id]:
+        continue
+    for t_sample_id in NGS_samples:
+      status = job_list[t_job_id][t_sample_id][status]
+      job_status[status] +=1 ;
+      job_total +=1 ;
+
+  print 'total jobs: ', job_total 
+  for i job_status.keys:
+    print '{0}: {1}, '.format(i, job_status[i])
+  print '\n'
 
 
 def run_workflow(NGS_config):
@@ -632,7 +704,7 @@ def run_workflow(NGS_config):
     ########## submit qsub jobs, job bundles disabled here, if need, check the original Perl script
 
     #### if has submitted some jobs, reset waiting time, otherwise double waiting time
-    print_job_status_summary()
+    print_job_status_summary(NGS_config)
     if has_submitted_some_jobs:
       sleep_time = sleep_time_min
     else:
@@ -660,22 +732,27 @@ def check_any_pids(pids):
   for pid in pids:
     if check_pid(pid):
       return True
+  return False
 
-
-def check_qsub_pid(pid):
-  '''Check For the existence of a qsub pid. '''
-  if ((queue_system == 'SGE') and %qstat_xml_data):
-    if defined(qstat_xml_data[i]): 
-##      t_sample_job['status'] = 'running' if ((qstat_xml_data[i]->[1] == 'r') and (t_sample_job->['status'] == 'submitted'))
-##       finish_flag = 0
-##       execution_submitted[ t_job{'execution'] } ++
-      
 
 def check_any_qsub_pids(pids):
   '''Check For the existence of a list of qsub pids. return True if any one exist'''
   for pid in pids:
-    if check_qsub_pid(pid):
+    if pid in qstat_xml_data.keys():
       return True
+  return False
+
+
+def validate_job_files(t_job_id, t_sample_id):
+  '''return True if necessary file exist'''
+  t_sample_job = job_list[t_job_id][t_sample_id]
+  if not (os.path.exists(t_sample_job['start_file'])    and os.path.getsize(t_sample_job['start_file']) > 0):
+    return False
+  if not (os.path.exists(t_sample_job['complete_file']) and os.path.getsize(t_sample_job['complete_file']) > 0):
+    return False
+  if not (os.path.exists(t_sample_job['cpu_file'])      and os.path.getsize(t_sample_job['cpu_file']) > 0):
+    return False
+  return True
 
 
 #### def check_submitted_job()
@@ -700,7 +777,7 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
 
   pids = [] #### either pids, or qsub ids
   try:
-    f = open(open(t_sh_pid, 'r')
+    f = open(t_sh_pid, 'r')
     pids = f.readlines()
     f.close()
     pids = [x.strip() for x in pids]
@@ -713,7 +790,7 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
   exe_type = t_execution['type']
   if (exe_type == 'sh'):
     if check_any_pids(pids):    #### still running
-      execution_submitted[ t_job{'execution'] } += t_job->['cores_per_cmd'] * t_job->['no_parallel']
+      execution_submitted[ t_job['execution'] ] += t_job['cores_per_cmd'] * t_job['no_parallel']
     elif validate_job_files(t_job_id, t_sample_id):                       #### job finished
       t_sample_job['status'] = 'completed'
       ## -- write_log('t_job_id,t_sample_id: change status to completed')
@@ -734,17 +811,6 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
     fatal_error('unknown execution type: '+ exe_type, exit_code=1)
 
 #### END def check_submitted_job()
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -837,13 +903,13 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
   if args.jobs:
     subset_flag = True
     subset_jobs = re.split(',', args.jobs)
-    ## -- add_subset_jobs_by_dependency()
+    subset_jobs_by_dependency(NGS_config)
     print subset_jobs
 
   if not os.path.exists('WF-sh'):
     os.system('mkdir WF-sh')
 
-  ## -- task_level_jobs();
+  task_level_jobs(NGS_config)
   ## -- my @NGS_batch_jobs = sort {($NGS_batch_jobs{$a}->{'job_level'} <=> $NGS_batch_jobs{$b}->{'job_level'}) or ($a cmp $b)} keys %NGS_batch_jobs;
 
   make_job_list(NGS_config)
@@ -895,127 +961,6 @@ sub write_log {
   print LOG    "\n";
   print STDERR "\n";
 }
-########## END write_log
-
-# WF.start.date and WF.complete.date need to have non-zero size
-sub validate_job_files {
-  my ($t_job_id, $t_sample_id) = @_;
-  my ($i, $j, $k);
-  my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-
-  return 0 unless (-s $t_sample_job->{'start_file'} );
-  return 0 unless (-s $t_sample_job->{'complete_file'} );
-  return 0 unless (-s $t_sample_job->{'cpu_file'} );
-
-  return 1; #### pass
-}
-########## END validate_job_files
-
-
-sub print_job_status_summary {
-  my ($t_job_id, $t_sample_id);
-  my ($i, $j, $k);
-
-  my %job_status = ();
-  my $job_total = 0;
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    foreach $t_sample_id (@NGS_samples) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      $job_status{$status}++;
-      $job_total++;
-    }
-  }
-
-  print STDERR "total jobs: $job_total,";
-  foreach $i (sort keys %job_status) {
-    print STDERR "$i: $job_status{$i},";
-  } 
-  print STDERR "\n"; 
-}
-########## END print_job_status_summary
-
-
-sub add_subset_jobs_by_dependency {
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id, $t_job);
-
-  while(1) {
-    my $num_subset_jobs = scalar keys %subset_jobs;
-
-    foreach $t_job_id (keys %subset_jobs) {
-      $t_job = $NGS_batch_jobs{$t_job_id};
-      my @t_injobs  = @{$t_job->{"injobs"}};
-
-      for $j (@t_injobs) {
-        $subset_jobs{$j} = 1;
-      }
-    }
-
-    last if ($num_subset_jobs == scalar keys %subset_jobs);
-  }
-}
-########## END add_subset_jobs_by_dependency
-
-
-sub task_level_jobs {
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id, $t_job);
-  my %job_level = ();
-
-  while(1) {
-    my $change_flag = 0;
-
-    foreach $t_job_id (keys %NGS_batch_jobs) {
-      $t_job = $NGS_batch_jobs{$t_job_id};
-      my @t_injobs  = @{$t_job->{"injobs"}};
-
-      if (@t_injobs) {
-        my $max_level_injob;
-        foreach $j (@t_injobs) {
-          next unless defined ($job_level{$j});
-          $max_level_injob = $job_level{$j} if ($job_level{$j} > $max_level_injob);          
-        }
-
-        next unless (defined($max_level_injob));
-        $max_level_injob++; #### one more level 
-        if (not defined ($job_level{$t_job_id})) {
-          $job_level{$t_job_id}=$max_level_injob;
-          $change_flag = 1;
-        }
-        elsif ($max_level_injob > $job_level{$t_job_id}) {
-          $job_level{$t_job_id}=$max_level_injob;
-          $change_flag = 1;
-        }
-      }
-      else {
-        if (not defined ($job_level{$t_job_id})) {
-          $job_level{$t_job_id}=1;
-          $change_flag = 1;
-        }
-      }
-    }
-    last unless ($change_flag);
-  }
-
-  foreach $t_job_id (sort keys %NGS_batch_jobs) {
-    $NGS_batch_jobs{$t_job_id}->{"job_level"} = $job_level{$t_job_id};
-  }
-}
-
-
-sub file1_after_file2 {
-  my ($file1, $file2) = @_;
-
-  # if not exist file1, assume it is in future, so it is newer
-  if (not -e ($file1)) {return 0;}
-  if (not -e ($file2)) {return 0;}
-
-  my $mtime1 = (stat($file1))[9];
-  my $mtime2 = (stat($file2))[9];
-
-  return ( ($mtime1 > $mtime2) ? 1 : 0);
-}
-######## END file1_after_file2
 
 sub file1_same_or_after_file2 {
   my ($file1, $file2) = @_;
@@ -1029,9 +974,6 @@ sub file1_same_or_after_file2 {
 
   return ( ($mtime1 >= $mtime2) ? 1 : 0);
 }
-######## END file1_after_file2
-
-
 
 sub time_str1 {
   my $s = shift;
@@ -1043,8 +985,5 @@ sub time_str1 {
 
   return $str;
 }
-########## END time_str1;
-
 
 """
-
