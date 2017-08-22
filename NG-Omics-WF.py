@@ -218,6 +218,9 @@ def make_job_list(NGS_config):
       t_command = re.sub('\\\\SAMPLE', t_sample_id, t_command)
       t_command = re.sub('\\\\SELF'  , t_job_id, t_command)
 
+      for i in NGS_config.ENV.keys():
+        t_command = re.sub('\\\\ENV.'+i, ENV[i], t_command)
+
       for i_data in range(0, len(NGS_sample_data[ t_sample_id ])):
         t_data = NGS_sample_data[ t_sample_id ][i_data]
         t_re = '\\\\DATA\.' + str(i_data)
@@ -542,7 +545,7 @@ def print_job_status_summary(NGS_config):
       job_total +=1 ;
 
   print 'total jobs: ', job_total 
-  for i job_status.keys:
+  for i in job_status.keys():
     print '{0}: {1}, '.format(i, job_status[i])
   print '\n'
 
