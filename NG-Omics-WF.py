@@ -130,10 +130,12 @@ def task_level_jobs(NGS_config):
     change_flag = False
     for t_job_id in NGS_config.NGS_batch_jobs.keys():
       t_job = NGS_config.NGS_batch_jobs[t_job_id]
-      t_injobs = t_job['injobs']
+      t_injobs = []
+      if 'injobs' in t_job.keys():
+        t_injobs = t_job['injobs']
 
       if len(t_injobs) > 0:
-        max_level_injob = 1
+        max_level_injob = 0
         for j in t_injobs:
           if not j in job_level.keys():
             continue
@@ -154,6 +156,8 @@ def task_level_jobs(NGS_config):
     if not change_flag:
       break
 
+  print job_level
+
   for t_job_id in NGS_config.NGS_batch_jobs.keys():
     NGS_config.NGS_batch_jobs[t_job_id]['job_level'] = job_level[t_job_id]
       
@@ -166,9 +170,10 @@ def add_subset_jobs_by_dependency(NGS_config):
     num_subset_jobs = len(subset_jobs)
     for t_job_id in subset_jobs:
       t_job = NGS_config.NGS_batch_jobs[t_job_id]
-      for j in t_job['injobs']:
-        if not (j in subset_jobs):
-          subset_jobs.append(j)
+      if 'injobs' in t_job.keys():
+        for j in t_job['injobs']:
+          if not (j in subset_jobs):
+            subset_jobs.append(j)
     if num_subset_jobs == len(subset_jobs):
       break
 #### END add_subset_jobs_by_dependency()
@@ -219,7 +224,7 @@ def make_job_list(NGS_config):
       t_command = re.sub('\\\\SELF'  , t_job_id, t_command)
 
       for i in NGS_config.ENV.keys():
-        t_command = re.sub('\\\\ENV.'+i, ENV[i], t_command)
+        t_command = re.sub('\\\\ENV.'+i, NGS_config.ENV[i], t_command)
 
       for i_data in range(0, len(NGS_sample_data[ t_sample_id ])):
         t_data = NGS_sample_data[ t_sample_id ][i_data]
@@ -385,7 +390,7 @@ def task_snapshot(NGS_config):
 
     foreach $t_sample_id (@NGS_samples) {
       foreach $t_job_id (keys %NGS_batch_jobs) {
-        check_submitted_job($t_job_id, $t_sample_id);
+        check_submitted_job(NGS_config, $t_job_id, $t_sample_id);
       }
     }
 
@@ -519,8 +524,8 @@ def SGE_qstat_xml_query():
   except:
     fatal_error("can not run qstat", exit_code=1)
 
-  qstat_xml = ET.fromstring(t_out)
-  qstat_xml_root = qstat_xml.getroot()
+  qstat_xml_root = ET.fromstring(t_out)
+  #qstat_xml_root = qstat_xml.getroot()
   for job_list in qstat_xml_root.iter('job_list'):
     job_id    = job_list.find('JB_job_number').text
     job_name  = job_list.find('JB_name').text
@@ -532,21 +537,24 @@ def SGE_qstat_xml_query():
 
 def print_job_status_summary(NGS_config):
   '''print jobs status'''
-  job_status = ()
+  job_status = {}
   job_total = 0
 
   for t_job_id in NGS_config.NGS_batch_jobs.keys():
     if subset_flag:
-      if not subset_jobs[t_job_id]:
+      if not (t_job_id in subset_jobs):
         continue
     for t_sample_id in NGS_samples:
-      status = job_list[t_job_id][t_sample_id][status]
-      job_status[status] +=1 ;
-      job_total +=1 ;
+      status = job_list[t_job_id][t_sample_id]['status']
+      if status in job_status.keys():
+        job_status[status] +=1
+      else:
+        job_status[status] =1
+      job_total +=1
 
-  print 'total jobs: ', job_total 
+  print 'total jobs: ', job_total, 
   for i in job_status.keys():
-    print '{0}: {1}, '.format(i, job_status[i])
+    print '{0}: {1}, '.format(i, job_status[i]), 
   print '\n'
 
 
@@ -570,7 +578,7 @@ def run_workflow(NGS_config):
       t_job = NGS_config.NGS_batch_jobs[t_job_id]
       t_execution = NGS_config.NGS_executions[ t_job['execution']]
       exe_type = t_execution['type']
-      if (queue_system == SGE) and (exe_type in ['qsub','qsub-pe']):
+      if (queue_system == 'SGE') and (exe_type in ['qsub','qsub-pe']):
         flag_qstat_xml_call = True
 
     if flag_qstat_xml_call:
@@ -580,14 +588,14 @@ def run_workflow(NGS_config):
     for t_job_id in NGS_config.NGS_batch_jobs.keys():
       t_job = NGS_config.NGS_batch_jobs[t_job_id]
       if subset_flag:
-        if not subset_jobs[ t_job_id]:
+        if not (t_job_id in subset_jobs):
           continue
       for t_sample_id in NGS_samples:
         t_sample_job = job_list[t_job_id][t_sample_id]
         if t_sample_job['status'] == 'completed':
           continue
 
-        check_submitted_job(t_job_id, t_sample_id)
+        check_submitted_job(NGS_config, t_job_id, t_sample_id)
         if t_sample_job['status'] == 'completed':
           continue
         flag_job_done = False
@@ -600,11 +608,11 @@ def run_workflow(NGS_config):
     for t_job_id in NGS_config.NGS_batch_jobs.keys():
       t_job = NGS_config.NGS_batch_jobs[t_job_id]
       if subset_flag:
-        if not subset_jobs[ t_job_id]:
+        if not (t_job_id in subset_jobs):
           continue
       for t_sample_id in NGS_samples:
         t_sample_job = job_list[t_job_id][t_sample_id]
-        if t_sample_job['status'] == 'wait':
+        if t_sample_job['status'] != 'wait':
           continue
 
         t_ready_flag = True
@@ -630,7 +638,7 @@ def run_workflow(NGS_config):
     for t_job_id in NGS_config.NGS_batch_jobs.keys():
       t_job = NGS_config.NGS_batch_jobs[t_job_id]
       if subset_flag:
-        if not subset_jobs[ t_job_id]:
+        if not (t_job_id in subset_jobs):
           continue
       t_execution = NGS_config.NGS_executions[ t_job['execution']]
       t_execution_id = t_job['execution']
@@ -662,7 +670,7 @@ def run_workflow(NGS_config):
     for t_job_id in NGS_config.NGS_batch_jobs.keys():
       t_job = NGS_config.NGS_batch_jobs[t_job_id]
       if subset_flag:
-        if not subset_jobs[ t_job_id]:
+        if not (t_job_id in subset_jobs):
           continue
       t_execution = NGS_config.NGS_executions[ t_job['execution']]
       t_execution_id = t_job['execution']
@@ -906,7 +914,7 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
   if args.jobs:
     subset_flag = True
     subset_jobs = re.split(',', args.jobs)
-    subset_jobs_by_dependency(NGS_config)
+    add_subset_jobs_by_dependency(NGS_config)
     print subset_jobs
 
   if not os.path.exists('WF-sh'):
