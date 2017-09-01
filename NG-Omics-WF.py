@@ -156,7 +156,7 @@ def task_level_jobs(NGS_config):
     if not change_flag:
       break
 
-  print job_level
+  # print job_level
 
   for t_job_id in NGS_config.NGS_batch_jobs.keys():
     NGS_config.NGS_batch_jobs[t_job_id]['job_level'] = job_level[t_job_id]
@@ -189,12 +189,12 @@ def make_job_list(NGS_config):
     if subset_flag and not (t_job_id in subset_jobs):
       continue
 
-    print t_job_id
     t_job = NGS_config.NGS_batch_jobs[ t_job_id ]
     t_execution = NGS_config.NGS_executions[ t_job["execution"] ]
 
-    print t_job
-    print t_execution
+    #print t_job_id
+    #print t_job
+    #print t_execution
     
     pe_parameter = ''
     if t_execution[ 'type' ] == 'qsub-pe':
@@ -203,14 +203,12 @@ def make_job_list(NGS_config):
 
     if t_job[ 'cores_per_cmd' ] > t_execution[ 'cores_per_node' ]:
       fatal_error('not enough cores ' + t_job, exit_code=1)
-      ## -- write_log("$t_job_id needs $t_job->{\"cores_per_cmd\"} cores, but $t_job->{\"execution\"} only has $t_execution->{\"cores_per_node\"} cores");
 
     t_job[ 'cmds_per_node' ] = t_execution[ 'cores_per_node' ] / t_job[ 'cores_per_cmd' ]
     t_job[ 'nodes_total' ] = math.ceil( t_job[ 'no_parallel' ] / float(t_job[ 'cmds_per_node' ]))
  
     if t_job[ 'nodes_total' ] > t_execution[ 'number_nodes' ]:
       fatal_error('not enough nodes ' + t_job, exit_code=1)
-      ## -- write_log("$t_job_id needs $t_job->{\"nodes_total\"} nodes, but $t_job->{\"execution\"} only has $t_execution->{\"number_nodes\"} nodes");
 
     CMD_opts = []
     if 'CMD_opts' in t_job.keys():  
@@ -250,10 +248,10 @@ def make_job_list(NGS_config):
           v_command = v_command + \
             'if ! [ -s {0}/{1} ]; then echo "zero size {2}/{3}"; exit; fi\n'.format(t_job_id, t_data, t_job_id, t_data)
 
-      print '-' * 80
-      print t_sample_id
-      print t_command
-      print v_command
+      #print '-' * 80
+      #print t_sample_id
+      #print t_command
+      #print v_command
     
       f_start    = pwd + '/' + t_sample_id + '/' + t_job_id + '/WF.start.date'
       f_complete = pwd + '/' + t_sample_id + '/' + t_job_id + '/WF.complete.date'
@@ -300,6 +298,7 @@ echo "sample={5} job={6} host=$my_host pid=$my_pid queue=$my_queue cores=$my_cor
           tsh.close()
         except IOError:
           fatal_error('cannot write to ' + job_list[ 't_job_id' ][ 't_sample_id' ][ 'sh_file' ], exit_code=1)
+  return
 ### END def make_job_list(NGS_config):
 
 
@@ -376,66 +375,82 @@ def task_snapshot(NGS_config):
   '''
   print job status
   '''
-
-  '''
+  queue_system = NGS_config.queue_system   #### default "SGE"
+  this_task = True
   if this_task:
-    my $flag_qstat_xml_call = 0;
-    foreach $t_job_id (keys %NGS_batch_jobs) {
-      my $t_job = $NGS_batch_jobs{$t_job_id};
-      my $t_execution = $NGS_executions{ $t_job->{"execution"} };
-      my $exe_type = $t_execution->{type};
-      $flag_qstat_xml_call = 1 if (($queue_system eq "SGE") and (($exe_type eq "qsub") or ($exe_type eq "qsub-pe")));
-    }
-    SGE_qstat_xml_query() if $flag_qstat_xml_call;
+    flag_qstat_xml_call = False
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      t_execution = NGS_config.NGS_executions[ t_job['execution']]
+      exe_type = t_execution['type']
+      if (queue_system == 'SGE') and (exe_type in ['qsub','qsub-pe']):
+        flag_qstat_xml_call = True
 
-    foreach $t_sample_id (@NGS_samples) {
-      foreach $t_job_id (keys %NGS_batch_jobs) {
-        check_submitted_job(NGS_config, $t_job_id, $t_sample_id);
-      }
-    }
+    if flag_qstat_xml_call:
+      SGE_qstat_xml_query()
 
+    for t_sample_id in NGS_samples:
+      for t_job_id in NGS_config.NGS_batch_jobs.keys():
+        if subset_flag:
+          if not (t_job_id in subset_jobs):
+            continue
+        check_submitted_job(NGS_config, t_job_id, t_sample_id)
 
-  my $max_len_sample = 0;
-  foreach $t_sample_id (@NGS_samples) {
-    $max_len_sample = length($t_sample_id) if (length($t_sample_id) > $max_len_sample);
-  }
-  my $max_len_job = 0;
-  foreach $t_job_id (@NGS_batch_jobs) {
-    $max_len_job = length($t_job_id) if (length($t_job_id) > $max_len_job);
-  }
+  max_len_sample = 0;
+  for t_sample_id in NGS_samples:
+    if len(t_sample_id) > max_len_sample:
+      max_len_sample = len(t_sample_id)
+  max_len_job = 0;
+  for t_job_id in NGS_config.NGS_batch_jobs.keys():
+    if len(t_job_id) > max_len_job:
+      max_len_job = len(t_job_id)
 
-  print <<EOD;
+  print '''
 Job status: 
 .\twait
 -\tsubmitted
 r\trunning  
 +\tcompleted
 !\terror
-EOD
+x\tunselected job
+'''
 
-  for ($i=$max_len_job-1; $i>=0; $i--) {
-    print ' 'x$max_len_sample, "\t";
-    foreach $t_job_id (@NGS_batch_jobs) {
-      print " ", ($i<length($t_job_id) ? substr(reverse($t_job_id), $i, 1):" ");
-    }
-    print "\n";
-  }
+  for i1 in range(max_len_job):
+    i = max_len_job - i1 - 1
+    print ' ' * max_len_sample + "\t", 
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      if i < len(t_job_id):
+        print ' ' + t_job_id[-i-1],
+      else:
+        print '  ',
+    print ''
+  print 'Sample\t' + ('-' * 30)
 
-  foreach $t_sample_id (@NGS_samples) {
-    print "$t_sample_id\t";
-    foreach $t_job_id (@NGS_batch_jobs) {
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $status = $t_sample_job->{'status'};
-      if    ($status eq "completed") { print " +";}
-      elsif ($status eq "submitted") { print " -";}
-      elsif ($status eq "running"  ) { print " r";}
-      elsif ($status eq "wait"     ) { print " .";}
-      elsif ($status eq "error"    ) { print " !";}
-      else                           { print " _";}
-    }
-    print "\n";
-  }
-  '''
+  for t_sample_id in NGS_samples:
+    print t_sample_id + '\t',
+    for t_job_id in NGS_config.NGS_batch_jobs.keys():
+      if subset_flag:
+        if not (t_job_id in subset_jobs):
+          print ' x',
+          continue
+      t_sample_job = job_list[t_job_id][t_sample_id]
+      status = t_sample_job['status']
+      if status == 'completed':
+        print ' +',
+      elif status == 'submitted':
+        print ' -',
+      elif status == 'running':
+        print ' r',
+      elif status == 'wait':
+        print ' .',
+      elif status == 'error':
+        print ' !',
+      else:
+        print ' _',
+    print ''
+
+  print '\n\n'
+  return
 ### def task_snapshot():
 
 
@@ -517,6 +532,7 @@ def SGE_qstat_xml_query():
   run qstat -f -xml and get xml tree
   '''
 
+  global qstat_xml_data
   qstat_xml_data = collections.defaultdict(dict)
   t_out = ''
   try:
@@ -552,7 +568,7 @@ def print_job_status_summary(NGS_config):
         job_status[status] =1
       job_total +=1
 
-  print 'total jobs: ', job_total, 
+  print 'total jobs: {0},'.format(job_total) , 
   for i in job_status.keys():
     print '{0}: {1}, '.format(i, job_status[i]), 
   print '\n'
@@ -601,7 +617,8 @@ def run_workflow(NGS_config):
         flag_job_done = False
 
     if flag_job_done:
-      ##-- write_log("job completed!")
+      print_job_status_summary(NGS_config)
+      print 'job completed!'
       break
 
     ########## check and update job status based on dependance 
@@ -630,7 +647,7 @@ def run_workflow(NGS_config):
 
         if t_ready_flag:
           t_sample_job['status'] = 'ready'
-          ## -- write_log("$t_job_id,$t_sample_id: change status to ready");
+          print '{0},{1}: change status to ready\n'.format(t_job_id, t_sample_id)
     ########## END check and update job status based on dependance 
 
     ########## submit local sh jobs
@@ -661,7 +678,7 @@ def run_workflow(NGS_config):
           pid_file.write(str(p.pid))
         pid_file.close()
         t_sample_job['status'] = 'submitted'
-        ## -- write_log("$t_job_id,$t_sample_id: change status to submitted");
+        print '{0},{1}: change status to submitted\n'.format(t_job_id, t_sample_id)
         execution_submitted[ t_execution_id ] += t_job['cores_per_cmd'] * t_job['no_parallel'] 
         has_submitted_some_jobs = True
     ########## END submit local sh jobs
@@ -705,7 +722,7 @@ def run_workflow(NGS_config):
           else:
             fatal_error('error submitting jobs')
           execution_submitted[t_execution_id] += t_nodes_per_job
-          ## -- write_log("$t_sh_bundle submitted for sample $t_sample_id, qsubid $cmd");
+          print '{0} submitted for {1}\n'.format(t_sample_job['sh_file'], t_sample_id)
 
         pid_file.close()
         t_sample_job['status'] = 'submitted'
@@ -722,9 +739,9 @@ def run_workflow(NGS_config):
       sleep_time  *= 2
       if sleep_time > sleep_time_max:
         sleep_time = sleep_time_max
-    ## --write_log("sleep $sleep_time seconds");
     time.sleep(sleep_time);
   #### END while 1:
+  return
 #### END def run_workflow(NGS_config)
 
 
@@ -784,7 +801,7 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
   status = t_sample_job['status']
   if ((status == 'wait') or (status == 'ready')):
     t_sample_job['status'] = 'submitted'
-    ## write_log('t_job_id,t_sample_id: change status to submitted')
+    print '{0},{1}: change status to submitted\n'.format(t_job_id, t_sample_id)
 
   pids = [] #### either pids, or qsub ids
   try:
@@ -804,23 +821,23 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
       execution_submitted[ t_job['execution'] ] += t_job['cores_per_cmd'] * t_job['no_parallel']
     elif validate_job_files(t_job_id, t_sample_id):                       #### job finished
       t_sample_job['status'] = 'completed'
-      ## -- write_log('t_job_id,t_sample_id: change status to completed')
+      print '{0},{1}: change status to completed\n'.format(t_job_id, t_sample_id)
     else:
       t_sample_job['status'] = 'error'
-      ## -- write_log('t_job_id,t_sample_id: change status to error')
+      print '{0},{1}: change status to error\n'.format(t_job_id, t_sample_id)
     return
   elif ((exe_type == 'qsub') or (exe_type == 'qsub-pe')):
     if check_any_qsub_pids(pids):    #### still running
       pass
     elif validate_job_files(t_job_id, t_sample_id):                       #### job finished
       t_sample_job['status'] = 'completed'
-      ## -- write_log('t_job_id,t_sample_id: change status to completed')
+      print '{0},{1}: change status to completed\n'.format(t_job_id, t_sample_id)
     else:
       t_sample_job['status'] = 'error'
-      ## -- write_log('t_job_id,t_sample_id: change status to error')
+      print '{0},{1}: change status to error\n'.format(t_job_id, t_sample_id)
   else:
     fatal_error('unknown execution type: '+ exe_type, exit_code=1)
-
+  return
 #### END def check_submitted_job()
 
 
@@ -901,21 +918,38 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
     parser.error('No sample file or sample name')
 
   NGS_config = imp.load_source('NGS_config', args.input)
+  print '''
+
+            ==================================================================
+            Workflow tools for next generation genomics, metagenomics, RNA-seq
+            and other type of omics data analyiss,
+        
+            Software originally developed since 2010 by Weizhong Li at UCSD
+                                                          currently at JCVI
+        
+            http://weizhongli-lab.org/ngomicswf           liwz@sdsc.edu
+            ==================================================================
+
+'''
 
   read_samples(args)
-  print 'Samples'
+  print 'Samples:', 
   print NGS_samples
   print NGS_sample_data
+  print '\n'
 
   read_parameters(args)
-  print 'Parameters'
+  print 'Parameters:',
   print NGS_opts
+  print '\n'
 
   if args.jobs:
     subset_flag = True
     subset_jobs = re.split(',', args.jobs)
     add_subset_jobs_by_dependency(NGS_config)
+    print 'Running subset jobs:',
     print subset_jobs
+    print '\n'
 
   if not os.path.exists('WF-sh'):
     os.system('mkdir WF-sh')
@@ -961,18 +995,6 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
 
 
 """
-sub write_log {
-  my @txt = @_;
-  my $i;
-  my $date = `date`; chop($date);
-  foreach $i (@txt) {
-    print LOG    "$date $i\n";
-    print STDERR "$date $i\n";
-  }
-  print LOG    "\n";
-  print STDERR "\n";
-}
-
 sub file1_same_or_after_file2 {
   my ($file1, $file2) = @_;
 
@@ -996,5 +1018,4 @@ sub time_str1 {
 
   return $str;
 }
-
 """
