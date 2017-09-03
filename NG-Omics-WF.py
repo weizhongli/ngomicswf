@@ -82,6 +82,7 @@ def read_parameters(args):
     for line in re.split(',', args.parameter_name):
       ll = re.split(':', line);
       NGS_opts[ ll[0] ] = ll[1:]
+  return
 
 
 def read_samples(args):
@@ -120,6 +121,8 @@ def read_samples(args):
     else:
       if os.system("mkdir " + sample):
         fatal_error('can not mkdir: ' + sample, exit_code=1)
+  return
+
 
 def task_level_jobs(NGS_config):
   '''
@@ -153,14 +156,13 @@ def task_level_jobs(NGS_config):
           job_level[t_job_id]=1
           change_flag = True
 
-    if not change_flag:
-      break
+    if not change_flag: break
 
   # print job_level
-
   for t_job_id in NGS_config.NGS_batch_jobs.keys():
     NGS_config.NGS_batch_jobs[t_job_id]['job_level'] = job_level[t_job_id]
       
+  return
 #### END task_level_jobs(NGS_config)
 
 
@@ -174,8 +176,8 @@ def add_subset_jobs_by_dependency(NGS_config):
         for j in t_job['injobs']:
           if not (j in subset_jobs):
             subset_jobs.append(j)
-    if num_subset_jobs == len(subset_jobs):
-      break
+    if num_subset_jobs == len(subset_jobs): break
+  return
 #### END add_subset_jobs_by_dependency()
 
        
@@ -302,63 +304,14 @@ echo "sample={5} job={6} host=$my_host pid=$my_pid queue=$my_queue cores=$my_cor
 ### END def make_job_list(NGS_config):
 
 
-def task_log_cpu(NGS_config):
-  '''
-  my %cpu_info;
-  foreach $t_job_id (keys %NGS_batch_jobs) {
-    if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-    my $t_job = $NGS_batch_jobs{$t_job_id};
-    foreach $t_sample_id (@NGS_samples) {
-
-      $cpu_info{$t_job_id}{$t_sample_id} = [$t_wall, $t_cpu];
-    }
-  }
-
-  foreach $t_sample_id (@NGS_samples) {
-    my $f_cpu = "$pwd/$t_sample_id/WF.cpu";
-    open(CPUOUT, "> $f_cpu") || die "Can not open $f_cpu";
-    print CPUOUT "#job_name\tCores\tWall(s)\tWall_time\tCPU(s)\tCPU_time\n";
-    my $min_start = 1402092131 * 999999;
-    my $max_end   = 0;
-    my $sum_cpu   = 0;
-    foreach $t_job_id (keys %NGS_batch_jobs) {
-      if ($subset_flag) {next unless ($subset_jobs{$t_job_id});} 
-      my $t_job = $NGS_batch_jobs{$t_job_id};
-      my $t_core     = $t_job->{"cores_per_cmd"} * $t_job->{"no_parallel"};
-
-      my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-      my $f_start    = $t_sample_job->{'start_file'};
-      my $f_complete = $t_sample_job->{'complete_file'};
-      my $f_cpu      = $t_sample_job->{'cpu_file'};
-      my $t_start    = `cat $f_start`;    $t_start =~ s/\s//g; $min_start = $t_start if ($t_start < $min_start);
-      my $t_end      = `cat $f_complete`; $t_end   =~ s/\s//g; $max_end   = $t_end   if ($t_end   > $max_end);
-      my $t_wall     = int($t_end - $t_start);
-         $t_wall     = 0 unless ($t_wall>0);
-
-      my $t_cpu = 0;
-      if (open(TCPU, $f_cpu)) {
-        while($ll = <TCPU>) {
-          chop($ll);
-          if ($ll =~ /^(\d+)m(\d+)/) {
-            $t_cpu += $1 * 60;
-          }
-        }
-        close(TCPU);
-      }
-      $sum_cpu += $t_cpu;
-
-      my $t_walls = time_str1($t_wall);
-      my $t_cpus  = time_str1($t_cpu);
-      print CPUOUT "$t_job_id\t$t_core\t$t_wall\t$t_walls\t$t_cpu\t$t_cpus\n";
-    }
-    my $t_wall = ($max_end - $min_start); $t_wall     = 0 unless ($t_wall>0);
-    my $t_walls = time_str1($t_wall);
-    my $sum_cpus= time_str1($sum_cpu);
-    print CPUOUT "total\t-\t$t_wall\t$t_walls\t$sum_cpu\t$sum_cpus\n";
-    close(CPUOUT);
-  }
-  '''
-#### END def task_log_cpu():
+def time_str1(s):
+  str1 = ''
+  str1 = str1 + str(s/3600) + 'h'
+  s = s % 3600
+  str1 = str1 + str(s/60) + 'm'
+  s = s %60
+  str1 = str1 + str(s) + 's'
+  return str1
 
 
 def task_list_jobs(NGS_config):
@@ -435,18 +388,12 @@ x\tunselected job
           continue
       t_sample_job = job_list[t_job_id][t_sample_id]
       status = t_sample_job['status']
-      if status == 'completed':
-        print ' +',
-      elif status == 'submitted':
-        print ' -',
-      elif status == 'running':
-        print ' r',
-      elif status == 'wait':
-        print ' .',
-      elif status == 'error':
-        print ' !',
-      else:
-        print ' _',
+      if   status == 'completed': print ' +',
+      elif status == 'submitted': print ' -',
+      elif status == 'running':   print ' r',
+      elif status == 'wait':      print ' .',
+      elif status == 'error':     print ' !',
+      else:                       print ' _',
     print ''
 
   print '\n\n'
@@ -454,77 +401,97 @@ x\tunselected job
 ### def task_snapshot():
 
 
-def task_delete_jobs():
-  '''
-sub task_delete_jobs {
-  my $opt = shift;
-  my ($i, $j, $k, $ll, $t_job_id, $t_sample_id);
-  my ($mode, $c) = split(/:/, $opt);
-  my $tmp_sh = "NGS-$$.sh";
+def task_delete_jobs(NGS_config, opt):
+  '''manually delete jobs and its dependant jobs'''
 
-  open(TMPSH, "> $tmp_sh") || die "can not write to file $tmp_sh";
-  print TMPSH "#Please execute the following commands\n";
-  foreach $t_sample_id (@NGS_samples) {
-    my %job_to_delete_ids = ();
-    if ($mode eq "jobids") {
-       %job_to_delete_ids = map {$_, 1} split(/,/,$c);
-    }
-    elsif ($mode eq "run_after") {
-      die "file $c doesn't exist!" unless (-e $c);
-      foreach $t_job_id (keys %NGS_batch_jobs) {
-        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-        my $t_sh_file = $t_sample_job->{'sh_file'};
-        my $t_sh_pid  = "$t_sh_file.pids";
-        next unless (-e $t_sh_pid);   #### unless the job is submitted
-        #$job_to_delete_ids{$t_job_id} = 1 if (file1_same_or_after_file2( $t_sample_job->{'start_file'} , $c));
-        $job_to_delete_ids{$t_job_id} = 1 if (file1_same_or_after_file2( $t_sh_pid , $c));
+  mode, c = re.split(':', opt)
+  tmp_sh = 'NGS-{0}.sh'.format(os.getpid())
 
-      }
-    }
-    else {
-      die "unknown option for deleting jobs: $opt";
-    }
+  try:
+    tsh = open(tmp_sh, 'w')
+  except IOError:
+    fatal_error('cannot write to ' + tmp_sh, exit_code=1)
+  
+  tsh.write('#Please execute the following commands\n')
 
-    # now %job_to_delete_ids are jobs need to be deleted
+  for t_sample_id in NGS_samples:
+    job_to_delete_ids =[]
+    if mode == 'jobids':
+      job_to_delete_ids = re.split(',', c)
+    elif mode == 'run after':
+      if not os.path.exists(c):
+        fatel_error('File does not exist:' + c, exit_code=1)
+      for t_job_id in NGS_config.NGS_batch_jobs.keys():
+        if subset_flag:
+          if not (t_job_id in subset_jobs): continue
+        t_sample_job = job_list[t_job_id][t_sample_id]
+
+        t_sh_pid  = t_sample_job['sh_file'] + '.pids'
+        if not os.path.exists(t_sh_pid): continue
+        if file1_same_or_after_file2(t_sh_pid, c):
+          job_to_delete_ids.append(t_job_id)
+    else:
+      fatel_error('unknown option for deleteing jobs: ' + opt, exit_code=1)
+
+    # now job_to_delete_ids are jobs need to be deleted
     # next find all jobs that depends on them, recrusively
-    my $no_jobs_to_delete = scalar keys %job_to_delete_ids;
-    while(1) {
-      foreach $t_job_id (keys %NGS_batch_jobs) {
-        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-        my $t_sh_file = $t_sample_job->{'sh_file'};
-        my $t_sh_pid  = "$t_sh_file.pids";
-        next unless (-e $t_sh_pid);   #### unless the job is submitted
-        my @t_injobs  = @{ $t_sample_job->{'injobs'} };
-        foreach my $t_job_id_2 (@t_injobs) {
-          $job_to_delete_ids{$t_job_id} = 1 if ($job_to_delete_ids{$t_job_id_2});
-        }
-      }
-      last if ($no_jobs_to_delete == (scalar keys %job_to_delete_ids)); #### no more depending jobs
-      $no_jobs_to_delete = scalar keys %job_to_delete_ids;
-    }
 
-    if ($no_jobs_to_delete) {
-      print TMPSH "#jobs to be deleted for $t_sample_id: ", join(",", keys %job_to_delete_ids), "\n";
-      print       "#jobs to be deleted for $t_sample_id: ", join(",", keys %job_to_delete_ids), "\n";
-      foreach $t_job_id (keys %job_to_delete_ids) {
-        my $t_sample_job = $job_list{$t_job_id}{$t_sample_id};
-        my $t_sh_file = $t_sample_job->{'sh_file'};
-        my $t_sh_pid  = "$t_sh_file.pids";
-        print TMPSH "\\rm -rf $pwd/$t_sample_id/$t_job_id\n";
-        print TMPSH "\\rm $t_sh_pid\n";        
-        print TMPSH "\\rm $t_sh_file.*.std*\n";
+    no_jobs_to_delete = len(job_to_delete_ids)
+    while True:
+      for t_job_id in NGS_config.NGS_batch_jobs.keys():
+        if subset_flag:
+          if not (t_job_id in subset_jobs): continue
+        t_sample_job = job_list[t_job_id][t_sample_id]
 
-        #### find the qsub ids to be deleted 
-        my $qids = `cat $t_sh_pid`; $qids =~ s/\n/ /g; $qids =~ s/\s+/ /g;
-        print TMPSH "qdel $qids\n";
-      }
-    }
-  }
-  close(TMPSH);
-  print "The script is not delete the file, please run $tmp_sh to delete files!!!\n\n";
-}
-  '''
+        t_sh_pid  = t_sample_job['sh_file'] + '.pids'
+        if not os.path.exists(t_sh_pid): continue
+
+        for t_job_id_2 in t_sample_job['injobs']:
+          if t_job_id_2 in job_to_delete_ids:
+            if not t_job_id in job_to_delete_ids:
+              job_to_delete_ids.append(t_job_id)
+
+      if no_jobs_to_delete == len(job_to_delete_ids): break
+      no_jobs_to_delete = len(job_to_delete_ids)
+
+    if not no_jobs_to_delete: continue
+    tsh.write('#jobs to be deleted for ' + t_sample_id + ': ' + ' '.join(job_to_delete_ids) + '\n'), 
+
+    for t_job_id in job_to_delete_ids:
+      t_sample_job = job_list[t_job_id][t_sample_id]
+      t_sh_pid  = t_sample_job['sh_file'] + '.pids'
+      tsh.write('\\rm -rf {0}/{1}\n'.format(t_sample_id, t_job_id))
+      tsh.write('\\rm '+ t_sh_pid + '\n')
+
+      #### find the qsub ids to be deleted 
+      pids = [] #### either pids, or qsub ids
+      try:
+        f = open(t_sh_pid, 'r')
+        pids = f.readlines()
+        f.close()
+        pids = [x.strip() for x in pids]
+      except IOError:
+        fatal_error('cannot open ' + t_sh_pid, exit_code=1)
+      tsh.write('qdel ' + ' '.join([str(x) for x in pids]) + '\n')
+
+    tsh.write('\n\n')
+  tsh.close()
+  print 'The script does not delete the files, please run ' + tmp_sh + ' to delete files!!!\n\n';
+  return
 #### END def task_delete_jobs()
+
+
+def file1_same_or_after_file2(file1, file2):
+
+  # if not exist file1, assume it is in future, so it is newer
+  if not os.path.exists(file1): return True
+
+  # otherwise file1 exist 
+  # if file2 not exist
+  if not os.path.exists(file2): return False
+
+  if os.path.getmtime(file1) >= os.path.getmtime(file2): return True
+  else:                                                  return False
 
 
 def SGE_qstat_xml_query():
@@ -749,10 +716,8 @@ def check_pid(pid):
   '''Check For the existence of a unix pid. '''
   try:
     os.kill(pid, 0)
-  except OSError:
-    return False
-  else:
-    return True
+  except OSError: return False
+  else:           return True
 
 
 def check_any_pids(pids):
@@ -795,8 +760,7 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
   t_execution = NGS_config.NGS_executions[ t_job['execution']]
 
   t_sh_pid = t_sample_job['sh_file'] + '.pids'
-  if not os.path.exists(t_sh_pid):
-    return
+  if not os.path.exists(t_sh_pid): return
 
   status = t_sample_job['status']
   if ((status == 'wait') or (status == 'ready')):
@@ -826,6 +790,7 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
       t_sample_job['status'] = 'error'
       print '{0},{1}: change status to error\n'.format(t_job_id, t_sample_id)
     return
+
   elif ((exe_type == 'qsub') or (exe_type == 'qsub-pe')):
     if check_any_qsub_pids(pids):    #### still running
       pass
@@ -951,8 +916,7 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
     print subset_jobs
     print '\n'
 
-  if not os.path.exists('WF-sh'):
-    os.system('mkdir WF-sh')
+  if not os.path.exists('WF-sh'): os.system('mkdir WF-sh')
 
   task_level_jobs(NGS_config)
   ## -- my @NGS_batch_jobs = sort {($NGS_batch_jobs{$a}->{'job_level'} <=> $NGS_batch_jobs{$b}->{'job_level'}) or ($a cmp $b)} keys %NGS_batch_jobs;
@@ -961,17 +925,14 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
 
   ## single task
   if args.task:
-    if args.task == 'log-cpu':
-      task_log_cpu(NGS_config)
-      exit(0)
-    elif args.task == 'list-jobs':
+    if args.task == 'list-jobs':
       task_list_jobs(NGS_config)
       exit(0)
     elif args.task == 'snapshot':
       task_snapshot(NGS_config)
       exit(0)
     elif args.task == 'delete-jobs':
-      task_delete_jobs(args.second_parameter)
+      task_delete_jobs(NGS_config, args.second_parameter)
       exit(0)
     elif args.task == 'write-sh':
       exit(0)
@@ -991,31 +952,5 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
 ################################################################################################
 
   run_workflow(NGS_config)
-  task_log_cpu(NGS_config)
 
 
-"""
-sub file1_same_or_after_file2 {
-  my ($file1, $file2) = @_;
-
-  # if not exist file1, assume it is in future, so it is newer
-  if (not -e ($file1)) {return 0;}
-  if (not -e ($file2)) {return 0;}
-
-  my $mtime1 = (stat($file1))[9];
-  my $mtime2 = (stat($file2))[9];
-
-  return ( ($mtime1 >= $mtime2) ? 1 : 0);
-}
-
-sub time_str1 {
-  my $s = shift;
-  my $str = "";
-
-  $str .= int($s/3600); $str .= "h"; $s = $s % 3600;
-  $str .= int($s/60);   $str .= "m"; $s = $s % 60;
-  $str .= $s;           $str .= "s";
-
-  return $str;
-}
-"""
