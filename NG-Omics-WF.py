@@ -7,8 +7,6 @@
 # | |\  | |__| |      | |__| | | | | | | | (__\__ \       \  /\  /  | |     
 # |_| \_|\_____|       \____/|_| |_| |_|_|\___|___/        \/  \/   |_|     
 #                                                                           
-# =========================== Next Generation Omics data workflow tools ========
-#
 # Workflow tools for next generation genomics, metagenomics, RNA-seq 
 # and other type of omics data analyiss, 
 #
@@ -32,13 +30,20 @@ import imp
 import collections
 import xml.etree.ElementTree as ET
 
-# import numpy as np
-# import pandas as pd
-# import matplotlib.pyplot as plt
-
 __author__ = 'Weizhong Li'
 
 ############## Global variables
+banner = '''
+            ==================================================================
+            Workflow tools for next generation genomics, metagenomics, RNA-seq
+            and other type of omics data analyiss,
+        
+            Software originally developed since 2010 by Weizhong Li at UCSD
+                                                          currently at JCVI
+        
+            http://weizhongli-lab.org/ngomicswf           liwz@sdsc.edu
+            ==================================================================
+'''
 NGS_config = None
 NGS_samples = []
 NGS_sample_data = {}
@@ -51,15 +56,14 @@ job_list = collections.defaultdict(dict)  # as job_list[$t_job_id][$t_sample_id]
 execution_submitted = {}                  # number of submitted jobs (qsub) or threads (local sh)
 ############## END Global variables
 
+
 def fatal_error(message, exit_code=1):
   print message
   exit(exit_code)
 
 
 def read_parameters(args):
-  """
-  read option parameters from file or command line
-  """
+  '''read option parameters from file or command line'''
   if args.parameter_file:
     try:
       ##format example
@@ -86,9 +90,7 @@ def read_parameters(args):
 
 
 def read_samples(args):
-  """
-  read sample and sample data from file or command line
-  """
+  '''read sample and sample data from file or command line'''
   if args.sample_file:
     try:
       f = open(args.sample_file, 'r')
@@ -125,9 +127,7 @@ def read_samples(args):
 
 
 def task_level_jobs(NGS_config):
-  '''
-  according to dependancy, make level of jobs
-  '''
+  '''according to dependancy, make level of jobs'''
   job_level = {}
   while True:
     change_flag = False
@@ -182,9 +182,7 @@ def add_subset_jobs_by_dependency(NGS_config):
 
        
 def make_job_list(NGS_config):
-  '''
-  make sh script for each job / sample
-  '''
+  '''make sh script for each job / sample'''
 
   verify_flag = False
   for t_job_id in NGS_config.NGS_batch_jobs:
@@ -194,10 +192,6 @@ def make_job_list(NGS_config):
     t_job = NGS_config.NGS_batch_jobs[ t_job_id ]
     t_execution = NGS_config.NGS_executions[ t_job["execution"] ]
 
-    #print t_job_id
-    #print t_job
-    #print t_execution
-    
     pe_parameter = ''
     if t_execution[ 'type' ] == 'qsub-pe':
       t_cores_per_cmd  = t_job[ 'cores_per_cmd' ]
@@ -250,11 +244,6 @@ def make_job_list(NGS_config):
           v_command = v_command + \
             'if ! [ -s {0}/{1} ]; then echo "zero size {2}/{3}"; exit; fi\n'.format(t_job_id, t_data, t_job_id, t_data)
 
-      #print '-' * 80
-      #print t_sample_id
-      #print t_command
-      #print v_command
-    
       f_start    = pwd + '/' + t_sample_id + '/' + t_job_id + '/WF.start.date'
       f_complete = pwd + '/' + t_sample_id + '/' + t_job_id + '/WF.complete.date'
       f_cpu      = pwd + '/' + t_sample_id + '/' + t_job_id + '/WF.cpu'
@@ -305,11 +294,10 @@ echo "sample={5} job={6} host=$my_host pid=$my_pid queue=$my_queue cores=$my_cor
 
 
 def time_str1(s):
-  str1 = ''
-  str1 = str1 + str(s/3600) + 'h'
+  str1 = str(s/3600) + 'h'
   s = s % 3600
   str1 = str1 + str(s/60) + 'm'
-  s = s %60
+  s = s % 60
   str1 = str1 + str(s) + 's'
   return str1
 
@@ -325,9 +313,7 @@ def task_list_jobs(NGS_config):
 
 
 def task_snapshot(NGS_config):
-  '''
-  print job status
-  '''
+  '''print job status'''
   queue_system = NGS_config.queue_system   #### default "SGE"
   this_task = True
   if this_task:
@@ -435,7 +421,6 @@ def task_delete_jobs(NGS_config, opt):
 
     # now job_to_delete_ids are jobs need to be deleted
     # next find all jobs that depends on them, recrusively
-
     no_jobs_to_delete = len(job_to_delete_ids)
     while True:
       for t_job_id in NGS_config.NGS_batch_jobs.keys():
@@ -482,23 +467,17 @@ def task_delete_jobs(NGS_config, opt):
 
 
 def file1_same_or_after_file2(file1, file2):
-
   # if not exist file1, assume it is in future, so it is newer
   if not os.path.exists(file1): return True
-
   # otherwise file1 exist 
   # if file2 not exist
   if not os.path.exists(file2): return False
-
   if os.path.getmtime(file1) >= os.path.getmtime(file2): return True
   else:                                                  return False
 
 
 def SGE_qstat_xml_query():
-  '''
-  run qstat -f -xml and get xml tree
-  '''
-
+  '''run qstat -f -xml and get xml tree'''
   global qstat_xml_data
   qstat_xml_data = collections.defaultdict(dict)
   t_out = ''
@@ -515,6 +494,7 @@ def SGE_qstat_xml_query():
     job_state = job_list.find('state').text
     qstat_xml_data[job_id] = [job_name, job_state]
 
+  return
 #### END def SGE_qstat_xml_query()
 
 
@@ -542,9 +522,7 @@ def print_job_status_summary(NGS_config):
 
 
 def run_workflow(NGS_config):
-  '''
-  major look for workflow run
-  '''
+  '''major loop for workflow run'''
   queue_system = NGS_config.queue_system   #### default "SGE"
   sleep_time_min = 15
   sleep_time_max = 120
@@ -739,12 +717,9 @@ def check_any_qsub_pids(pids):
 def validate_job_files(t_job_id, t_sample_id):
   '''return True if necessary file exist'''
   t_sample_job = job_list[t_job_id][t_sample_id]
-  if not (os.path.exists(t_sample_job['start_file'])    and os.path.getsize(t_sample_job['start_file']) > 0):
-    return False
-  if not (os.path.exists(t_sample_job['complete_file']) and os.path.getsize(t_sample_job['complete_file']) > 0):
-    return False
-  if not (os.path.exists(t_sample_job['cpu_file'])      and os.path.getsize(t_sample_job['cpu_file']) > 0):
-    return False
+  if not (os.path.exists(t_sample_job['start_file'])    and os.path.getsize(t_sample_job['start_file']) > 0):    return False
+  if not (os.path.exists(t_sample_job['complete_file']) and os.path.getsize(t_sample_job['complete_file']) > 0): return False
+  if not (os.path.exists(t_sample_job['cpu_file'])      and os.path.getsize(t_sample_job['cpu_file']) > 0):      return False
   return True
 
 
@@ -806,34 +781,9 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
 #### END def check_submitted_job()
 
 
-
-
-
-
-############################################################################################
-# _______    ________  _________       ___________________   ________  .____       _________
-# \      \  /  _____/ /   _____/       \__    ___/\_____  \  \_____  \ |    |     /   _____/
-# /   |   \/   \  ___ \_____  \   ______ |    |    /   |   \  /   |   \|    |     \_____  \ 
-#/    |    \    \_\  \/        \ /_____/ |    |   /    |    \/    |    \    |___  /        \
-#\____|__  /\______  /_______  /         |____|   \_______  /\_______  /_______ \/_______  /
-#        \/        \/        \/                           \/         \/        \/        \/ 
-############################################################################################
-
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(formatter_class = RawTextHelpFormatter,
-                                   description     = textwrap.dedent('''\
-
-            ==================================================================
-            Workflow tools for next generation genomics, metagenomics, RNA-seq
-            and other type of omics data analyiss,
-        
-            Software originally developed since 2010 by Weizhong Li at UCSD
-                                                          currently at JCVI
-        
-            http://weizhongli-lab.org/ngomicswf           liwz@sdsc.edu
-            ==================================================================
-
-   '''))
+                                   description     = textwrap.dedent(banner))
 
   parser.add_argument('-i', '--input',       help="workflow configration file, required", required=True)
   parser.add_argument('-s', '--sample_file', help='''
@@ -881,32 +831,11 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
 
   if (args.sample_file is None) and (args.sample_name is None) :
     parser.error('No sample file or sample name')
-
   NGS_config = imp.load_source('NGS_config', args.input)
-  print '''
 
-            ==================================================================
-            Workflow tools for next generation genomics, metagenomics, RNA-seq
-            and other type of omics data analyiss,
-        
-            Software originally developed since 2010 by Weizhong Li at UCSD
-                                                          currently at JCVI
-        
-            http://weizhongli-lab.org/ngomicswf           liwz@sdsc.edu
-            ==================================================================
-
-'''
-
+  print banner
   read_samples(args)
-  print 'Samples:', 
-  print NGS_samples
-  print NGS_sample_data
-  print '\n'
-
   read_parameters(args)
-  print 'Parameters:',
-  print NGS_opts
-  print '\n'
 
   if args.jobs:
     subset_flag = True
@@ -919,11 +848,8 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
   if not os.path.exists('WF-sh'): os.system('mkdir WF-sh')
 
   task_level_jobs(NGS_config)
-  ## -- my @NGS_batch_jobs = sort {($NGS_batch_jobs{$a}->{'job_level'} <=> $NGS_batch_jobs{$b}->{'job_level'}) or ($a cmp $b)} keys %NGS_batch_jobs;
-
   make_job_list(NGS_config)
 
-  ## single task
   if args.task:
     if args.task == 'list-jobs':
       task_list_jobs(NGS_config)
@@ -939,6 +865,7 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
     else:
       fatal_error('undefined task' + args.task, exit_code=1)
 
+  run_workflow(NGS_config)
 ################################################################################################
 #  _____               _   _  _____  _____  _           _       _           _       _         
 # |  __ \             | \ | |/ ____|/ ____|| |         | |     | |         (_)     | |        
@@ -950,7 +877,3 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
 #                                     |______|                    |______|__/                 
 ########## Run NGS_batch_jobs for each samples http://patorjk.com/software/taag
 ################################################################################################
-
-  run_workflow(NGS_config)
-
-
