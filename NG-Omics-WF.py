@@ -198,7 +198,7 @@ def make_job_list(NGS_config):
       pe_parameter = "#$ -pe orte " + str(t_cores_per_cmd)
 
     if t_job[ 'cores_per_cmd' ] > t_execution[ 'cores_per_node' ]:
-      fatal_error('not enough cores ' + t_job, exit_code=1)
+      fatal_error('not enough cores ' + t_job_id, exit_code=1)
 
     t_job[ 'cmds_per_node' ] = t_execution[ 'cores_per_node' ] / t_job[ 'cores_per_cmd' ]
     t_job[ 'nodes_total' ] = math.ceil( t_job[ 'no_parallel' ] / float(t_job[ 'cmds_per_node' ]))
