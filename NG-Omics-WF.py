@@ -74,7 +74,7 @@ def read_parameters(args):
       for line in f:
         if line[0] == '#':
           continue
-        if not re.match('^w', line):
+        if not re.match('^\w', line):
           continue
         ll = re.split('\s+', line.rstrip());
         NGS_opts[ ll[0] ] = ll[1:]
@@ -803,8 +803,8 @@ Sample_ID1:sample_data_0:sample_data_0:sample_data_1,Sample_ID2:sample_data_0:sa
 replace default paramters in workflow configration file
 File format example:
 #parameter file example, TAB or space delimited for following lines
-CMDOPT JobID_A:opt0:opt1:opt2
-CMDOPT JobID_B:opt0:opt1
+CMDOPT JobID_A opt0 opt1 opt2
+CMDOPT JobID_B opt0 opt1
   ''')
   parser.add_argument('-T', '--parameter_name', help='''
 parameter from command line
