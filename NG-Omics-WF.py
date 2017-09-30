@@ -657,9 +657,11 @@ def run_workflow(NGS_config):
           t_stderr = t_sample_job['sh_file'] + '.' + str(i) + '.stderr'
           t_stdout = t_sample_job['sh_file'] + '.' + str(i) + '.stdout'
 
-          command_line = 'qsub {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
-                                                               t_execution['command_err_opt'], t_stderr, 
-                                                               t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])
+          qsub_exe = 'qsub'
+          if hasattr(NGS_config, 'qsub_exe'): qsub_exe = NGS_config.qsub_exe
+          command_line = qsub_exe + ' {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
+                                                                          t_execution['command_err_opt'], t_stderr, 
+                                                                          t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])
           cmd = subprocess.check_output([command_line], shell=True)
           if re.search('\d+', cmd):
             pid = re.search('\d+', cmd).group(0)
