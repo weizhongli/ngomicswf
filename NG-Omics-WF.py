@@ -287,6 +287,7 @@ echo "sample={5} job={6} host=$my_host pid=$my_pid queue=$my_queue cores=$my_cor
 
 '''.format(t_execution['template'], pe_parameter, t_job['cores_per_cmd'], t_job['execution'], pwd, t_sample_id, t_job_id, f_start, t_command, v_command, f_complete, f_cpu ))
           tsh.close()
+          os.system('chmod u+x '+ t_sh_file)
         except IOError:
           fatal_error('cannot write to ' + job_list[ 't_job_id' ][ 't_sample_id' ][ 'sh_file' ], exit_code=1)
   return
