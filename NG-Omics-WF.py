@@ -214,15 +214,15 @@ def make_job_list(NGS_config):
 
     for t_sample_id in NGS_samples:
       t_command = t_job[ 'command' ]
-      t_command = re.sub('\\\\SAMPLE', t_sample_id, t_command)
-      t_command = re.sub('\\\\SELF'  , t_job_id, t_command)
+      t_command = re.sub('\$SAMPLE', t_sample_id, t_command)
+      t_command = re.sub('\$SELF'  , t_job_id, t_command)
 
       for i in NGS_config.ENV.keys():
-        t_command = re.sub('\\\\ENV.'+i, NGS_config.ENV[i], t_command)
+        t_command = re.sub('\$ENV.'+i, NGS_config.ENV[i], t_command)
 
       for i_data in range(0, len(NGS_sample_data[ t_sample_id ])):
         t_data = NGS_sample_data[ t_sample_id ][i_data]
-        t_re = '\\\\DATA\.' + str(i_data)
+        t_re = '\$DATA\.' + str(i_data)
         t_command = re.sub(t_re, t_data, t_command)
 
       t_injobs = []
@@ -230,12 +230,12 @@ def make_job_list(NGS_config):
         t_injobs = t_job[ 'injobs' ]
         for i_data in range(0, len(t_job[ 'injobs' ])):
           t_data = t_job[ 'injobs' ][i_data]
-          t_re = '\\\\INJOBS\.' + str(i_data)
+          t_re = '\$INJOBS\.' + str(i_data)
           t_command = re.sub(t_re, t_data, t_command)
 
       for i_data in range(0, len(CMD_opts)):
         t_data = CMD_opts[i_data]
-        t_re = '\\\\CMDOPTS\.' + str(i_data)
+        t_re = '\$CMDOPTS\.' + str(i_data)
         t_command = re.sub(t_re, t_data, t_command)
 
       v_command = ''
