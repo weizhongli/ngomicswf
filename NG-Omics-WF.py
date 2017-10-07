@@ -659,7 +659,7 @@ def run_workflow(NGS_config):
           t_stdout = t_sample_job['sh_file'] + '.' + str(i) + '.stdout'
 
           qsub_exe = 'qsub'
-          if hasattr(NGS_config, 'qsub_exe'): qsub_exe = NGS_config.qsub_exe
+          if 'qsub_exe' in t_execution.keys(): qsub_exe = t_execution['qsub_exe']
           command_line = qsub_exe + ' {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
                                                                           t_execution['command_err_opt'], t_stderr, 
                                                                           t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])

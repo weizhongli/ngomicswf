@@ -4,7 +4,6 @@
 ################################################################################
 
 queue_system = 'SGE'
-qsub_exe = 'qsub'
 
 ########## local variables etc. Please edit
 ENV={
@@ -15,6 +14,7 @@ ENV={
 NGS_executions = {}
 NGS_executions['qsub_1'] = {
   'type'                : 'qsub-pe',
+  'qsub_exe'            : 'qsub',
   'cores_per_node'      : 32,
   'number_nodes'        : 64,
   'user'                : 'weizhong', #### I will use command such as qstat -u weizhong to query submitted jobs
