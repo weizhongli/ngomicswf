@@ -806,8 +806,8 @@ Sample_ID1:sample_data_0:sample_data_0:sample_data_1,Sample_ID2:sample_data_0:sa
 replace default paramters in workflow configration file
 File format example:
 #parameter file example, TAB or space delimited for following lines
-CMDOPT JobID_A opt0 opt1 opt2
-CMDOPT JobID_B opt0 opt1
+JobID_A opt0 opt1 opt2
+JobID_B opt0 opt1
   ''')
   parser.add_argument('-T', '--parameter_name', help='''
 parameter from command line
