@@ -193,7 +193,7 @@ fi
 
 
 NGS_batch_jobs['orf-split'] = {
-  'injobs'         : ['metagene'],
+  'injobs'         : ['ORF-prediction'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -203,5 +203,32 @@ $ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $INJOBS.0/ORF.faa               $SELF/or
 '''
 }
 
+NGS_batch_jobs['blast-kegg'] = {
+  'injobs'         : ['orf-split'],
+  'CMD_opts'       : ['kegg/kegg'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,              # number of threads used by command below
+  'no_parallel'    : 2,               # number of total jobs to run using command below
+  'command'        : '''
 
+for i in `seq 1 4`
+  do $ENV.NGS_root/NGS-tools/ann_batch_run_dir.pl --INDIR1=$INJOBS.0/orf-split --OUTDIR1=$SELF/blast --CPU=$SELF/WF.cpu $ENV.NGS_root/apps/blast+/bin/blastp  -query {INDIR1} -out {OUTDIR1} \\
+  -db $ENV.NGS_root/refs/$CMDOPTS.0 -evalue 0.001 -num_threads 4 -num_alignments 5 -outfmt 6 -seg yes &
+done
+wait
+
+'''
+}
+
+NGS_batch_jobs['blast-kegg-parse'] = {
+  'injobs'         : ['blast-kegg'],
+  'CMD_opts'       : ['kegg/kegg_all.faa'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 2,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+$ENV.NGS_root/NGS-tools/ann_parse_blm8.pl     -i $INJOBS.0/blast -o $SELF/protein-ann.txt  -d $ENV.NGS_root/refs/$CMDOPTS.0
+$ENV.NGS_root/NGS-tools/ann_parse_blm8-raw.pl -i $INJOBS.0/blast -o $SELF/protein-full.txt -d $ENV.NGS_root/refs/$CMDOPTS.0
+'''
+}
 
