@@ -621,7 +621,7 @@ def run_workflow(NGS_config):
         pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
         for i in range(0, t_job['no_parallel']):
           p = subprocess.Popen(['/bin/bash', t_sample_job['sh_file']], shell=True)
-          pid_file.write(str(p.pid))
+          pid_file.write(str(p.pid)+'\n')
         pid_file.close()
         t_sample_job['status'] = 'submitted'
         print '{0},{1}: change status to submitted\n'.format(t_job_id, t_sample_id)
