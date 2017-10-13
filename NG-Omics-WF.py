@@ -666,7 +666,7 @@ def run_workflow(NGS_config):
           cmd = subprocess.check_output([command_line], shell=True)
           if re.search('\d+', cmd):
             pid = re.search('\d+', cmd).group(0)
-            pid_file.write(pid)
+            pid_file.write(pid + '\n')
           else:
             fatal_error('error submitting jobs')
           execution_submitted[t_execution_id] += t_nodes_per_job
