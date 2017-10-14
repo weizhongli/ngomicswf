@@ -1,0 +1,15 @@
+use patch to apply local configration on a updated workflow file
+
+With an old released version NG-Omics-microbiome.py, you made some local change (e.g. path etc) 
+and save to NG-Omics-microbiome-jcvi.py
+
+run 
+diff -u NG-Omics-microbiome.py NG-Omics-microbiome-jcvi.py > NG-Omics-microbiome-jcvi.py.patch
+
+
+Next time with a newly released NG-Omics-microbiome.py
+run
+patch -o NG-Omics-microbiome-jcvi.py NG-Omics-microbiome.py NG-Omics-microbiome-jcvi.py.patch
+so that your local configration will apply to updated NG-Omics-microbiome.py and 
+write into NG-Omics-microbiome-jcvi.py
+
