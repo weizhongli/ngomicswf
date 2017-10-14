@@ -157,7 +157,7 @@ else
 fi
 
 
-$ENV.NGS_root/NGS-tools/fasta_filter_short_seq.pl -i $SELF/assembly/scaffold.fa -c $CMDOPTS.1 -o - | \\
+$ENV.NGS_root/NGS-tools/fasta_filter_short_seq.pl -i $SELF/assembly/scaffold.fa -c $CMDOPTS.1 -o - -a len | \\
   $ENV.NGS_root/NGS-tools/fasta_rename.pl -i - -s "$SAMPLE|scaffold|" -b 0 -o $SELF/assembly/scaffold-new.fa
 mv -f $SELF/assembly/scaffold-new.fa $SELF/assembly/scaffold.fa
 
@@ -169,7 +169,7 @@ mv -f $SELF/assembly/scaffold-new.fa $SELF/assembly/scaffold.fa
 
 NGS_batch_jobs['ORF-prediction'] = {
   'injobs'         : ['assembly'],
-  'CMD_opts'       : ['metagene'],    # can be metagene or prodigal 
+  'CMD_opts'       : ['metagene', '20'],    # can be metagene or prodigal 
   'non_zero_files' : ['ORF.faa'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 1,               # number of threads used by command below
@@ -188,6 +188,8 @@ else
   exit 1  
 fi
 
+$ENV.NGS_root/NGS-tools/fasta_filter_short_seq.pl -i $SELF/ORF.faa -c $CMDOPTS.1 -a len -o $SELF/ORF-new.faa
+mv  $SELF/ORF-new.faa $SELF/ORF.faa
 '''
 }
 
