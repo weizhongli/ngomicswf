@@ -193,20 +193,36 @@ mv  $SELF/ORF-new.faa $SELF/ORF.faa
 '''
 }
 
-
-NGS_batch_jobs['orf-split'] = {
+NGS_batch_jobs['cd-hit-kegg'] = {
   'injobs'         : ['ORF-prediction'],
+  'CMD_opts'       : ['kegg/kegg'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
+$ENV.NGS_root/apps/cd-hit/cd-hit-2d -i $ENV.NGS_root/refs/$CMDOPTS.0 -i2 $INJOBS.0/ORF.faa -o $SELF/out \\
+  -c 0.75 -n 5 -d 0 -g 1 -G 0 -aS 0.9 -T 16 -M 32000 > $SELF/out.log
+$ENV.NGS_root/apps/cd-hit/cd-hit-clstr_2_blm8.pl < $SELF/out.clstr > $SELF/out.bl
+
 mkdir $SELF/orf-split
-$ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $INJOBS.0/ORF.faa               $SELF/orf-split/split        256
+$ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $SELF/out $SELF/orf-split/split 64
 '''
 }
 
+
+#NGS_batch_jobs['orf-split'] = {
+#  'injobs'         : ['ORF-prediction'],
+#  'execution'      : 'qsub_1',        # where to execute
+#  'cores_per_cmd'  : 16,              # number of threads used by command below
+#  'no_parallel'    : 1,               # number of total jobs to run using command below
+#  'command'        : '''
+#mkdir $SELF/orf-split
+#$ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $INJOBS.0/ORF.faa               $SELF/orf-split/split        256
+#'''
+#}
+
 NGS_batch_jobs['blast-kegg'] = {
-  'injobs'         : ['orf-split'],
+  'injobs'         : ['cd-hit-kegg'],
   'CMD_opts'       : ['kegg/kegg'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
@@ -223,12 +239,14 @@ wait
 }
 
 NGS_batch_jobs['blast-kegg-parse'] = {
-  'injobs'         : ['blast-kegg'],
+  'injobs'         : ['blast-kegg','cd-hit-kegg'],
   'CMD_opts'       : ['kegg/kegg_all.faa'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
+#cp -p $INJOBS.1/out.bl $INJOBS.0/blast
+ln -s ../../$INJOBS.1/out.bl $INJOBS.0/blast/out.bl
 $ENV.NGS_root/NGS-tools/ann_parse_blm8.pl     -i $INJOBS.0/blast -o $SELF/protein-ann.txt  -d $ENV.NGS_root/refs/$CMDOPTS.0
 $ENV.NGS_root/NGS-tools/ann_parse_blm8-raw.pl -i $INJOBS.0/blast -o $SELF/protein-full.txt -d $ENV.NGS_root/refs/$CMDOPTS.0
 '''
