@@ -256,3 +256,17 @@ $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $SELF/protein-full.txt -r $ENV.
 '''
 }
 
+NGS_batch_jobs['blastx-viral'] = {
+  'injobs'         : ['assembly'],
+  'CMD_opts'       : ['ref-genomes/ref_viral_prot_95'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 8,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+$ENV.NGS_root/apps/blast+/bin/blastx -query  $INJOBS.0/assembly/scaffold.fa -out $SELF/viral-bl \\
+  -db $ENV.NGS_root/ref-genomes/ref_viral_prot_95 -evalue 0.001 -num_threads 8 -num_alignments 5 -outfmt 6 -seg yes
+
+'''
+}
+
