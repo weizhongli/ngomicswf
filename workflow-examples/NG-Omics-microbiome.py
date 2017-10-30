@@ -265,7 +265,7 @@ NGS_batch_jobs['blastx-viral'] = {
   'command'        : '''
 
 $ENV.NGS_root/apps/blast+/bin/blastx -query  $INJOBS.0/assembly/scaffold.fa -out $SELF/viral-bl \\
-  -db $ENV.NGS_root/ref-genomes/ref_viral_prot_95 -evalue 0.001 -num_threads 8 -num_alignments 5 -outfmt 6 -seg yes
+  -db $ENV.NGS_root/refs/ref-genomes/ref_viral_prot_95 -evalue 0.001 -num_threads 8 -num_alignments 5 -outfmt 6 -seg yes
 
 '''
 }
