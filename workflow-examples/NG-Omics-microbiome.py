@@ -267,6 +267,11 @@ NGS_batch_jobs['blastx-viral'] = {
 $ENV.NGS_root/apps/blast+/bin/blastx -query  $INJOBS.0/assembly/scaffold.fa -out $SELF/viral-bl \\
   -db $ENV.NGS_root/refs/ref-genomes/ref_viral_prot_95 -evalue 0.001 -num_threads 8 -num_alignments 5 -outfmt 6 -seg yes
 
+$ENV.NGS_root/NGS-tools/ann_blastx_orf_call_format.pl -i $SELF/viral-bl -o $SELF/viral-blnew
+perl -e 'while(<>){ chop($_); $_ =~ s/\s.+$//; print ">$_\nXXXXXXXXXX\n"; }' < $SELF/viral-blnew > $SELF/blastx-ORF
+
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $SELF/viral-blnew -r $ENV.NGS_root/refs/ref-genomes/ref_viral_prot_95.clstr.ann \\
+  -a $SELF/blastx-ORF -o $SELF/ORF -t $ENV.NGS_root/refs/ref-genomes/ref_viral_prot_taxon.txt
 '''
 }
 
