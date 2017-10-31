@@ -44,7 +44,7 @@ while($ll=<TMP>){
 
   my $new_id = "$lls[0].$lls[6].$lls[7]";
   $locb = ($lls[6] < $lls[7]) ? $lls[6] : $lls[7];
-  $loce = ($lls[6] < $lls[7]) ? $lls[6] : $lls[7];
+  $loce = ($lls[6] > $lls[7]) ? $lls[6] : $lls[7];
   $len  = int( ($loce - $locb + 1) / 3);
 
   print OUT "$new_id\t$lls[1]\t$lls[2]\t$lls[3]\t$lls[4]\t$lls[5]\t1\t$len\t$lls[8]\t$lls[9]\t$lls[10]\t$lls[11]\n";
