@@ -265,7 +265,7 @@ sub ORF_info {
   if ( $ll =~ /\/start=(\d+)\s+\/end=(\d+)\s+\/frame=(\S+)/ ) {
     $start = $1; $end = $2; $frame = $3;
   }
-  elsif ( $ll =~ /\s+# (\d+) # (\d+) # (\S+) ID/) {
+  elsif ( $ll =~ /\s+# (\d+) # (\d+) # (\S+) # ID/) {
     $start = $1; $end = $2; $frame = $3;
   }
 #prodigal format
