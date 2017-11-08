@@ -31,6 +31,8 @@ my $output       = $opts{o}; #### output ORF file
 my $output_ann   = "$output-ann.txt"; #### output annotation
 my $output_tax   = "$output-tax.txt"; #### output tax 
 my $output_log   = "$output-ann.log";
+my $cutoff_e     = $opts{e}; 
+   $cutoff_e     = 1e-6 unless defined($cutoff_e);
 
 my ($i, $j, $k, $ll, $cmd);
 
@@ -77,12 +79,28 @@ my @all_sids = keys %scaffold_member_orfs;
 my %ref_ids = ();
 my %orf_2_hit = ();
 $last_ORF = "";
-open(TMP, $bl_file) || die "can not open $bl_file";
+if (-d $bl_file) {
+ open(TMP, "cat $bl_file/* |") || die "can not open $bl_file";
+}
+elsif (-e $bl_file) {
+  open(TMP, $bl_file) || die "can not open $bl_file";
+}
+
+    my $output_looks_like = <<EOD; 
+#query                          subject         %       alnln   mis     gap     q_b     q_e     s_b     s_e     expect  bits
+#0                              1               2       3       4       5       6       7       8       9       10      11
+mHE-SRS012902|scaffold|86.16    gnl|CDD|226997  47.62   42      17      2       164     201     210     250     5e-04   37.6
+mHE-SRS012902|scaffold|109.23   gnl|CDD|225183  47.46   236     122     1       1       236     475     708     1e-92    284
+mHE-SRS012902|scaffold|109.23   gnl|CDD|224055  44.35   239     130     2       1       239     332     567     2e-84    259
+mHE-SRS012902|scaffold|109.23   gnl|CDD|227321  39.50   238     140     3       1       238     324     557     9e-69    218
+EOD
+
 while($ll=<TMP>) {
   #ser:SERP1011|ti|176279|KO||len|10203
   chop($ll);
   my @lls = split(/\t/, $ll);
   my $orf_id = $lls[0];
+  next unless ($lls[10] <= $cutoff_e);
   next if ($orf_id eq $last_ORF); #### only top hit
 
   my $rid = $lls[1];
@@ -287,6 +305,7 @@ $script_name -i blast_alignment_file -r cluster_info -a input ORF -o output ORF 
 
   options:
     -i blast alignment file in tab format
+       can also be a name of a directory, which has multiple blast alignment files 
     -r cluster information file
     -a input ORF fasta file, used in blast search
     -t taxon info file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl based on blast ref db
@@ -294,6 +313,6 @@ $script_name -i blast_alignment_file -r cluster_info -a input ORF -o output ORF 
        output-ann.txt
        output-tax.txt
        output-tax.txt
-
+    -e expect_cutoff, default 1e-6
 EOD
 }
