@@ -97,16 +97,20 @@ while($ll=<TMP>) {
 close(TMP);
 
 my %ref_2_taxids = ();
+my %ref_2_KO = ();
 my %ref_2_ann = ();
 open(TMP, $clstr_ref) || die "can not open $clstr_ref";
 while($ll=<TMP>){
   if ($ll =~ /^>/) {
     chop($ll);
-    my ($rid, $no1, $no_taxid, $des) = split(/\t/, substr($ll, 1));
+    my ($rid, $no1, $no_taxid, $KO, $des) = split(/\t/, substr($ll, 1));
     next unless ($ref_ids{$rid});
 
     $ref_2_ann{$rid} = $des;
     $ref_2_taxids{$rid} = [];
+    if ($KO =~ /KO\|(\w+)/) {
+      $ref_2_KO{$rid} = $1;
+    }
 
     for ($i=0; $i<$no_taxid; $i++) {
       $ll=<TMP>; chop($ll);
@@ -189,7 +193,7 @@ close(LOG);
 open(OUT, "> $output_ann") || die "can not write to $output_ann";
 open(TAX, "> $output_tax") || die "can not write to $output_tax";
 print TAX "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tNumber_scaffolds\tNumber_ORFs\n";
-print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tDescription\n";
+print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFamily\tDescription\n";
 #### output annotation with taxid
 my @all_tids = keys %taxid_member_scaffolds;
    @all_tids = sort { $taxid_orf_count{$b} <=> $taxid_orf_count{$a} } @all_tids;
@@ -220,13 +224,15 @@ foreach $sptid (@all_sptids) {
       my @orf_ids = @{$scaffold_member_orfs{$sid}};
       foreach $orf_id (@orf_ids) {
         my $ann = "hypothetical protein";
+        my $KO  = "";
         my $iden1 = "-";
         if ( defined( $orf_2_hit{$orf_id} ) ) {
           my ($rid, $iden, $alnln) = @{ $orf_2_hit{$orf_id} };
           $ann = $ref_2_ann{$rid}; 
           $iden1 = "$iden%";
+          $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
         }
-        print OUT "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$ann\n";
+        print OUT "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$KO\t$ann\n";
       }
     }
   }
