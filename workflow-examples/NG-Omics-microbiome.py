@@ -14,6 +14,7 @@ ENV={
 NGS_executions = {}
 NGS_executions['qsub_1'] = {
   'type'                : 'qsub-pe',
+  'pe_para'             : '-pe orte', #### '-pe orte' work with orte environment with $pe_slot allocation rule, '-pe threaded' work with multiple threading env
   'qsub_exe'            : 'qsub',
   'cores_per_node'      : 32,
   'number_nodes'        : 64,

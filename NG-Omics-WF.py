@@ -196,6 +196,8 @@ def make_job_list(NGS_config):
     if t_execution[ 'type' ] == 'qsub-pe':
       t_cores_per_cmd  = t_job[ 'cores_per_cmd' ]
       pe_parameter = "#$ -pe orte " + str(t_cores_per_cmd)
+      if 'pe_para' in t_execution.keys():
+        pe_parameter = "#$ " + t_execution[ 'pe_para' ] + " " +  str(t_cores_per_cmd)
 
     if t_job[ 'cores_per_cmd' ] > t_execution[ 'cores_per_node' ]:
       fatal_error('not enough cores ' + t_job_id, exit_code=1)
