@@ -107,8 +107,12 @@ while($ll=<TMP>) {
   $ref_ids{ $rid } = 1;
   my $iden = $lls[2];
   my $alnln= $lls[3];  
-
-  $orf_2_hit{$orf_id} = [$rid, $iden, $alnln];
+  my $ref_len = $alnln;
+  if ($rid =~ /len\|(\d+)/) {
+    $ref_len = $1;
+  }
+  my $frac = int($alnln / $ref_len * 10000) / 10000;
+  $orf_2_hit{$orf_id} = [$rid, $iden, $alnln, $frac];
 
   $last_ORF = $orf_id;
 }
@@ -162,7 +166,7 @@ foreach $round (qw/1 2/) {
     foreach $orf_id (@orf_ids) {
       next unless defined( $orf_2_hit{$orf_id} );
   
-      my ($rid, $iden, $alnln) = @{ $orf_2_hit{$orf_id} };
+      my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
       my $score = $iden * $alnln;
       print LOG "\tORF:$orf_id\t$rid\t$iden%\t$alnln\n";
   
@@ -211,7 +215,7 @@ close(LOG);
 open(OUT, "> $output_ann") || die "can not write to $output_ann";
 open(TAX, "> $output_tax") || die "can not write to $output_tax";
 print TAX "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tNumber_scaffolds\tNumber_ORFs\n";
-print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFamily\tDescription\n";
+print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFrac_alignment\tFamily\tDescription\n";
 #### output annotation with taxid
 my @all_tids = keys %taxid_member_scaffolds;
    @all_tids = sort { $taxid_orf_count{$b} <=> $taxid_orf_count{$a} } @all_tids;
@@ -245,12 +249,12 @@ foreach $sptid (@all_sptids) {
         my $KO  = "";
         my $iden1 = "-";
         if ( defined( $orf_2_hit{$orf_id} ) ) {
-          my ($rid, $iden, $alnln) = @{ $orf_2_hit{$orf_id} };
+          my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
           $ann = $ref_2_ann{$rid}; 
           $iden1 = "$iden%";
           $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
         }
-        print OUT "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$KO\t$ann\n";
+        print OUT "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac\t$KO\t$ann\n";
       }
     }
   }
@@ -266,10 +270,10 @@ foreach $sid (@all_sids) {
   foreach $orf_id (@orf_ids) {
     my $ann = "hypothetical protein";
     if ( defined( $orf_2_hit{$orf_id} ) ) {
-      my ($rid, $iden, $alnln) = @{ $orf_2_hit{$orf_id} };
+      my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
       $ann = $ref_2_ann{$rid}; 
     }
-    print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$ann\n";
+    print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac\t$KO\t$ann\n";
   }
   $no_unknown_sid++;
   $no_unknown_orf += $scaffold_orf_count{$sid};
