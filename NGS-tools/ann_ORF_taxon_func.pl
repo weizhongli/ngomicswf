@@ -272,6 +272,8 @@ foreach $sid (@all_sids) {
     if ( defined( $orf_2_hit{$orf_id} ) ) {
       my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
       $ann = $ref_2_ann{$rid}; 
+      $iden1 = "$iden%";
+      $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
     }
     print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac\t$KO\t$ann\n";
   }
