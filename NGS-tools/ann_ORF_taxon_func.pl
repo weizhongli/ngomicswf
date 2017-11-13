@@ -248,13 +248,15 @@ foreach $sptid (@all_sptids) {
         my $ann = "hypothetical protein";
         my $KO  = "";
         my $iden1 = "-";
+        my $frac1 = 1;
         if ( defined( $orf_2_hit{$orf_id} ) ) {
           my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
           $ann = $ref_2_ann{$rid}; 
           $iden1 = "$iden%";
+          $frac1 = $frac;
           $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
         }
-        print OUT "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac\t$KO\t$ann\n";
+        print OUT "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\n";
       }
     }
   }
@@ -269,13 +271,17 @@ foreach $sid (@all_sids) {
   my @orf_ids = @{$scaffold_member_orfs{$sid}};
   foreach $orf_id (@orf_ids) {
     my $ann = "hypothetical protein";
+    my $KO  = "";
+    my $iden1 = "-";
+    my $frac1 = 1;
     if ( defined( $orf_2_hit{$orf_id} ) ) {
       my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
       $ann = $ref_2_ann{$rid}; 
       $iden1 = "$iden%";
+      $frac1 = $frac;
       $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
     }
-    print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac\t$KO\t$ann\n";
+    print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\n";
   }
   $no_unknown_sid++;
   $no_unknown_orf += $scaffold_orf_count{$sid};
