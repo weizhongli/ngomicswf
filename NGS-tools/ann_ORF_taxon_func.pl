@@ -273,7 +273,7 @@ foreach $sid (@all_sids) {
     my $ann = "hypothetical protein";
     my $KO  = "";
     my $iden1 = "-";
-    my $frac1 = 1;
+    my $frac1 = "-";
     if ( defined( $orf_2_hit{$orf_id} ) ) {
       my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
       $ann = $ref_2_ann{$rid}; 
