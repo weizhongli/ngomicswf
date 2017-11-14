@@ -203,6 +203,7 @@ while($ll=<TMP>) {
      $fr = 1.0 unless (($fr =~ /^\d/) and ($fr > 0.0));
   my $KO = $lls[11]; #### if hit KO
   next unless ($KO =~ /^K\d+/);
+  next unless ( $KO_des{$KO} ); #### unless this KO is in scope
 
   my $ORF = $lls[5];
   my $depth = 1;
