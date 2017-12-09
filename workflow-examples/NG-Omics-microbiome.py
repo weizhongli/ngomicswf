@@ -209,7 +209,7 @@ NGS_batch_jobs['cd-hit-kegg'] = {
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 $ENV.NGS_root/apps/cd-hit/cd-hit-2d -i $ENV.NGS_root/refs/$CMDOPTS.0 -i2 $INJOBS.0/ORF.faa -o $SELF/out \\
-  -c 0.75 -n 5 -d 0 -g 1 -G 0 -aS 0.9 -T 16 -M 32000 > $SELF/out.log
+  -c 0.75 -n 5 -d 0 -g 1 -G 0 -aS 0.9 -A 60 -aL 0.25 -T 16 -M 32000 > $SELF/out.log
 $ENV.NGS_root/apps/cd-hit/cd-hit-clstr_2_blm8.pl < $SELF/out.clstr > $SELF/out.bl
 
 mkdir $SELF/orf-split
@@ -239,7 +239,7 @@ NGS_batch_jobs['blast-kegg'] = {
 
 for i in `seq 1 4`
   do $ENV.NGS_root/NGS-tools/ann_batch_run_dir.pl --INDIR1=$INJOBS.0/orf-split --OUTDIR1=$SELF/blast --CPU=$SELF/WF.cpu $ENV.NGS_root/apps/blast+/bin/blastp  -query {INDIR1} -out {OUTDIR1} \\
-  -db $ENV.NGS_root/refs/$CMDOPTS.0 -evalue 0.001 -num_threads 4 -num_alignments 5 -outfmt 6 -seg yes &
+  -db $ENV.NGS_root/refs/$CMDOPTS.0 -evalue 1e-6 -num_threads 4 -num_alignments 5 -outfmt 6 -seg yes &
 done
 wait
 

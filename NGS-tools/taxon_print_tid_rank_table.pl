@@ -27,7 +27,7 @@ my $des_str             = $opts{a}; #### fasta header with $des_str|taxid_descri
    $des_str             = "taxdes" unless ($des_str);
 
 my ($i, $j, $k, $ll, $cmd);
-my @ranks = qw/superkingdom phylum class order family genus species toprank/;
+my @ranks = qw/superkingdom kingdom phylum class order family genus species toprank/;
 my %ranks = map {$_, 1} @ranks;
 
 my %toprank_taxids = ();
@@ -135,6 +135,9 @@ foreach $ttax (keys %taxid_involved) {
 }
 
 open(OUT, "> $output") || die "can not write to $output\n";
+print OUT "#taxid\trank\tname";
+foreach $i (@ranks) { print "\t$i\t$i\_ti"; }
+print OUT "\n";
 if (1) {
   my @top_tax_list = keys %toprank_taxids;
   for ($i=0; $i<@ranks; $i++) {
@@ -179,7 +182,7 @@ sub usage {
 Given a fasta file and path to NCBI taxonomy dir, this script produce a table of 
 taxid, rank and tree
 usage:
-  $script_name  -o output -s path_to_reference_fasta file -d path_to_ncbi_taxonomy_dir
+  $script_name  -o output -f path_to_reference_fasta_file -d path_to_ncbi_taxonomy_dir
 
   options
     -t tid_str, taxid need to be coded in fasta header in format like taxid|12345
