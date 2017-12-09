@@ -136,7 +136,7 @@ foreach $ttax (keys %taxid_involved) {
 
 open(OUT, "> $output") || die "can not write to $output\n";
 print OUT "#taxid\trank\tname";
-foreach $i (@ranks) { print "\t$i\t$i\_ti"; }
+foreach $i (@ranks) { print OUT "\t$i\t$i\_ti"; }
 print OUT "\n";
 if (1) {
   my @top_tax_list = keys %toprank_taxids;
