@@ -40,6 +40,7 @@ my %taxon_info = ();
 open(TMP, $taxon_file) || die "can not open $taxon_file";
 while($ll=<TMP>) {
   chop($ll);
+  next if ($ll =~ /^#/); 
   my ($tid, $rank, @lls) = split(/\t/, $ll);
   next unless ($rank eq "toprank");
   $taxon_info{$tid} = [@lls];
@@ -224,7 +225,7 @@ my %sptid_member_tids = ();
 my %sptid_orf_count = ();
 foreach $tid (@all_tids) {
   my @tid_info = @{$taxon_info{$tid}};
-  my $sptid = $tid_info[13];
+  my $sptid = $tid_info[15];
   $sptid = "None" unless ($sptid);
   if (not defined($sptid_member_tids{$sptid})) {
     $sptid_member_tids{$sptid} = [];
@@ -241,7 +242,7 @@ foreach $sptid (@all_sptids) {
     my @sids = @{ $taxid_member_scaffolds{$tid} };
        @sids = sort { $scaffold_orf_count{$b} <=> $scaffold_orf_count{$a} } @sids;
     my @tid_info = @{$taxon_info{$tid}};
-    print TAX "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t", $#sids+1, "\t$taxid_orf_count{$tid}\n";
+    print TAX "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t", $#sids+1, "\t$taxid_orf_count{$tid}\n";
     foreach $sid (@sids) {
       my @orf_ids = @{$scaffold_member_orfs{$sid}};
       foreach $orf_id (@orf_ids) {
@@ -256,7 +257,7 @@ foreach $sptid (@all_sptids) {
           $frac1 = $frac;
           $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
         }
-        print OUT "$tid_info[14]\t$tid_info[13]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\n";
+        print OUT "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\n";
       }
     }
   }
