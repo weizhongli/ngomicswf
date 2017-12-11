@@ -38,7 +38,9 @@ while($ll = <TMP>){
   if ($ll =~ /^>(\S+)/) {
     $ORF = $1;
     $contig = $ORF; 
-    $contig =~ s/_\d+$//;
+    if    ($contig =~  /_\d+$/) { $contig =~  s/_\d+$//; } #### prodigal
+    elsif ($contig =~ /\.\d+$/) { $contig =~ s/\.\d+$//; } #### metagene
+
     if ($contig_2_cov{$contig}) {
       print OUT "$ORF\t$contig_2_cov{$contig}\n";
     }
