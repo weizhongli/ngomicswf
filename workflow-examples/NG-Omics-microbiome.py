@@ -248,18 +248,15 @@ wait
 
 NGS_batch_jobs['blast-kegg-parse'] = {
   'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction'],
-  'CMD_opts'       : ['kegg/kegg_all.faa'],
+  'CMD_opts'       : ['kegg/kegg_taxon.txt'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 ln -s ../../$INJOBS.1/out.bl $INJOBS.0/blast/out.bl
 
-#$ENV.NGS_root/NGS-tools/ann_parse_blm8.pl     -i $INJOBS.0/blast -o $SELF/protein-ann.txt  -d $ENV.NGS_root/refs/$CMDOPTS.0
-#$ENV.NGS_root/NGS-tools/ann_parse_blm8-raw.pl -i $INJOBS.0/blast -o $SELF/protein-full.txt -d $ENV.NGS_root/refs/$CMDOPTS.0
-
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/kegg/kegg.clstr.ann \\
-  -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/kegg/kegg_taxon.txt
+  -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0
 
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002.keg -o $SELF/ORF-ann-kegg-module
