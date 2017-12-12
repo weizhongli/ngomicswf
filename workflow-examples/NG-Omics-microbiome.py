@@ -175,7 +175,7 @@ perl -e 'while(<>){ if ($_ =~ /^>(\S+)/) { $id=$1;  if ($_ =~ /_cov_([\d\.]+)/) 
 
 NGS_batch_jobs['ORF-prediction'] = {
   'injobs'         : ['assembly'],
-  'CMD_opts'       : ['metagene', '20'],    # can be metagene or prodigal 
+  'CMD_opts'       : ['prodigal', '20'],    # can be metagene or prodigal 
   'non_zero_files' : ['ORF.faa'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 1,               # number of threads used by command below
@@ -203,7 +203,7 @@ $ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $SELF/ORF.faa -d $INJOBS.
 
 NGS_batch_jobs['cd-hit-kegg'] = {
   'injobs'         : ['ORF-prediction'],
-  'CMD_opts'       : ['kegg/kegg'],
+  'CMD_opts'       : ['kegg/keggf'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -231,7 +231,7 @@ $ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $SELF/out $SELF/orf-split/split 64
 
 NGS_batch_jobs['blast-kegg'] = {
   'injobs'         : ['cd-hit-kegg'],
-  'CMD_opts'       : ['kegg/kegg'],
+  'CMD_opts'       : ['kegg/keggf'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 2,               # number of total jobs to run using command below
@@ -248,7 +248,7 @@ wait
 
 NGS_batch_jobs['blast-kegg-parse'] = {
   'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction'],
-  'CMD_opts'       : ['kegg/kegg_taxon.txt'],
+  'CMD_opts'       : ['kegg/keggf_taxon.txt'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
