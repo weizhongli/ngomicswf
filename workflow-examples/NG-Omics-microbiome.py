@@ -173,6 +173,26 @@ perl -e 'while(<>){ if ($_ =~ /^>(\S+)/) { $id=$1;  if ($_ =~ /_cov_([\d\.]+)/) 
 }
 
 
+NGS_batch_jobs['assembly-binning'] = {
+  'injobs'         : ['assembly','remove-host'],
+  'CMD_opts'       : [],
+  'non_zero_files' : ['ORF.faa'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+$ENV.NGS_root/apps/bin/bwa index -a bwtsw -p $SELF/assembly $INJOBS.0/assembly/scaffold.fa
+$ENV.NGS_root/apps/bin/bwa mem -t 16 $SELF/assembly $INJOBS.1/non-host-R1.fa $INJOBS.1/non-host-R2.fa | \\
+  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T 75  > $SELF/assembly-mapping.sam
+
+$ENV.NGS_root/apps/bin/samtools view -b -S $SELF/assembly-mapping.sam > $SELF/assembly-mapping.bam
+rm -f $SELF/assembly-mapping.sam
+
+'''
+}
+
+
 NGS_batch_jobs['ORF-prediction'] = {
   'injobs'         : ['assembly'],
   'CMD_opts'       : ['prodigal', '20'],    # can be metagene or prodigal 
