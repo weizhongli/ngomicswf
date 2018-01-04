@@ -174,7 +174,7 @@ perl -e 'while(<>){ if ($_ =~ /^>(\S+)/) { $id=$1;  if ($_ =~ /_cov_([\d\.]+)/) 
 
 
 NGS_batch_jobs['assembly-binning'] = {
-  'injobs'         : ['assembly','remove-host'],
+  'injobs'         : ['assembly','remove-host','reads-mapping'],
   'CMD_opts'       : ['75'],     # alignment cutoff score for both R1 and R2
   'non_zero_files' : ['ORF.faa'],
   'execution'      : 'qsub_1',        # where to execute
@@ -183,13 +183,20 @@ NGS_batch_jobs['assembly-binning'] = {
   'command'        : '''
 
 $ENV.NGS_root/apps/bin/bwa index -a bwtsw -p $SELF/assembly $INJOBS.0/assembly/scaffold.fa
+
 $ENV.NGS_root/apps/bin/bwa mem -t 16 $SELF/assembly $INJOBS.1/non-host-R1.fa $INJOBS.1/non-host-R2.fa | \\
   $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/assembly-mapping.sam
 $ENV.NGS_root/NGS-tools/sam-to-seq-depth-cov.pl -s $INJOBS.0/assembly/scaffold.fa -o $SELF/scaffold-cov < $SELF/assembly-mapping.sam
 
+$ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome_full.raw.bam | \\
+  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/ref-mapping.sam 
 
-$ENV.NGS_root/apps/bin/samtools view -b -S $SELF/assembly-mapping.sam > $SELF/assembly-mapping.bam
-rm -f $SELF/assembly-mapping.sam
+$ENV.NGS_root/NGS-tools/assembly-binning.pl -i $SELF/assembly-mapping.sam -j  $SELF/ref-mapping.sam -o $SELF/assembly-bin \\
+  -s $INJOBS.0/assembly/scaffold.fa -c 0.5 -n 10 -a sptax
+
+#rm -f $SELF/assembly/assembly.amb  $SELF/assembly/assembly.ann $SELF/assembly/assembly.bwt $SELF/assembly/assembly.pac $SELF/assembly/assembly.sa
+#rm -f $SELF/assembly-mapping.sam
+#rm -f $SELF/ref-mapping.sam
 
 '''
 }
