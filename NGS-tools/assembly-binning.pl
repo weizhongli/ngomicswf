@@ -83,10 +83,10 @@ while($ll=<TMP>){
     my $FLAG = $lls[1];
     next unless ( $FLAG & 0x0040 ); #### count R1 only 
 
-    if    ($id    ne $last_id) {
+    if    (($id  ne $last_id) and $last_id ) {
       my @t_taxids = keys %t_taxids;
       if ($#t_taxids+1 <= $n_cutoff) {
-        $read_2_taxids = [@t_taxids];
+        $read_2_taxids{$last_id} = [@t_taxids];
       }
       %t_taxids = ();
     }
@@ -96,10 +96,10 @@ while($ll=<TMP>){
   } #### alignment section
 }
 close(TMP);
-    if    ($id    ne $last_id) {
+    if    (($id  ne $last_id) and $last_id ) {
       my @t_taxids = keys %t_taxids;
       if ($#t_taxids+1 <= $n_cutoff) {
-        $read_2_taxids = [@t_taxids];
+        $read_2_taxids{$last_id} = [@t_taxids];
       }
     }
 
