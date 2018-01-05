@@ -112,9 +112,10 @@ if ($output) {
 foreach $i (@assembly_ids) {
   my $taxid = "Unknown";
   my $p = 1;
+  my $n_reads = 0;
   if ($assembly_reads_mapped{$i}) {
     my @reads = @{$assembly_reads_mapped{$i}};
-    my $n_reads = $#reads+1;
+    $n_reads = $#reads+1;
     my %mapped_tids = ();
 
     foreach $j (@reads) {
@@ -122,7 +123,7 @@ foreach $i (@assembly_ids) {
       my @tids = @{$read_2_taxids{$j}};
       my $n_tids = $#tids + 1;
       foreach $k (@tids) {
-        $mapped_tids{$k} += 1/$n_tids;
+        $mapped_tids{$k} += 1.0 / $n_tids / $n_reads;
       }
     }
     my @mapped_tids = keys %mapped_tids;
@@ -134,7 +135,7 @@ foreach $i (@assembly_ids) {
     }
   }
 
-  print OUT "$i\t$taxid\t$p\n";
+  print OUT "$i\t$taxid\t$p\t$n_reads\t$assembly_2_len{$i}\n";
 }
 close(OUT) if ($output);
 
