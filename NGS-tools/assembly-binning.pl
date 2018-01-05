@@ -91,7 +91,7 @@ while($ll=<TMP>){
       %t_taxids = ();
     }
 
-    %t_taxids{$tid} = 1;
+    $t_taxids{$tid} = 1;
     $last_id = $id;
   } #### alignment section
 }
@@ -101,7 +101,6 @@ close(TMP);
       if ($#t_taxids+1 <= $n_cutoff) {
         $read_2_taxids = [@t_taxids];
       }
-      %t_taxids = ();
     }
 
 
