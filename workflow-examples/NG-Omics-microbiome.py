@@ -193,6 +193,8 @@ $ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome_full.raw.bam | \\
 
 $ENV.NGS_root/NGS-tools/assembly-binning.pl -i $SELF/assembly-mapping.sam -j  $SELF/ref-mapping.sam -o $SELF/assembly-bin \\
   -s $INJOBS.0/assembly/scaffold.fa -c 0.5 -n 10 -a sptax
+$ENV.NGS_root/NGS-tools/assembly-binning.pl -i $SELF/assembly-mapping.sam -j  $SELF/ref-mapping.sam -o $SELF/assembly-bin.strain \\
+  -s $INJOBS.0/assembly/scaffold.fa -c 0.1 -n 10 -a taxid
 
 rm -f $SELF/assembly.amb  $SELF/assembly.ann $SELF/assembly.bwt $SELF/assembly.pac $SELF/assembly.sa
 rm -f $SELF/assembly-mapping.sam

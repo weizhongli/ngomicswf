@@ -78,7 +78,7 @@ while($ll=<TMP>){
     my $id  = $lls[0];
     my $rid = $lls[2];    if ($rid eq "*") {  next; }
     my $tid = "";
-    if ($rid =~ /\|$tax_str\|(\d+)/) { $tid = $1; } else { next; }
+    if ($rid =~ /$tax_str\|(\d+)/) { $tid = $1; } else { next; }
 
     my $FLAG = $lls[1];
     next unless ( $FLAG & 0x0040 ); #### count R1 only 
