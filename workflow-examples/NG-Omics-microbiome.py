@@ -176,7 +176,7 @@ perl -e 'while(<>){ if ($_ =~ /^>(\S+)/) { $id=$1;  if ($_ =~ /_cov_([\d\.]+)/) 
 NGS_batch_jobs['assembly-binning'] = {
   'injobs'         : ['assembly','remove-host','reads-mapping'],
   'CMD_opts'       : ['75'],     # alignment cutoff score for both R1 and R2
-  'non_zero_files' : ['ORF.faa'],
+  'non_zero_files' : ['assembly-bin'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -194,9 +194,9 @@ $ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome_full.raw.bam | \\
 $ENV.NGS_root/NGS-tools/assembly-binning.pl -i $SELF/assembly-mapping.sam -j  $SELF/ref-mapping.sam -o $SELF/assembly-bin \\
   -s $INJOBS.0/assembly/scaffold.fa -c 0.5 -n 10 -a sptax
 
-#rm -f $SELF/assembly/assembly.amb  $SELF/assembly/assembly.ann $SELF/assembly/assembly.bwt $SELF/assembly/assembly.pac $SELF/assembly/assembly.sa
-#rm -f $SELF/assembly-mapping.sam
-#rm -f $SELF/ref-mapping.sam
+rm -f $SELF/assembly.amb  $SELF/assembly.ann $SELF/assembly.bwt $SELF/assembly.pac $SELF/assembly.sa
+rm -f $SELF/assembly-mapping.sam
+rm -f $SELF/ref-mapping.sam
 
 '''
 }
