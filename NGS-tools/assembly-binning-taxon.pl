@@ -38,9 +38,9 @@ while($ll=<TMP>) {
   next if ($ll =~ /^#/);
   my ($tid, $rank, @lls) = split(/\t/, $ll);
   next unless ($rank eq "toprank");
-  $tid_2_sptid{$tid} = $lls[15];
+  $tid_2_sptid{$tid} = $lls[18];
   $taxon_info{$tid} = [@lls];
-  $sp_name{$lls[15]} = $lls[14];
+  $sp_name{$lls[18]} = $lls[17];
   $strain_name{$tid} = $lls[2];
 
 #511145 toprank #Escherichia coli str. K-12 substr. MG1655      Bacteria        2       Proteobacteria  1224    Gammaproteobacteria     1236    Enterobacterales        91347   Enterobacteriaceae      543     Escherichia     561     Escherichia coli        562     Escherichia coli str. K-12 substr. MG1655       511145
@@ -170,8 +170,9 @@ foreach $i (@assembly_ids) {
          @mapped_tids = sort { $mapped_tids{$b} <=> $mapped_tids{$a} } @mapped_tids;
       foreach $k (@mapped_tids) {
         next unless ( $tid_2_sptid{$k} eq  $sptid);
-        $tax_id = $k;
+        $taxid = $k;
         $strain_name = $strain_name{$k};
+        last;
       }
     }
 
