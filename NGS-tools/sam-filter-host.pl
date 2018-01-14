@@ -36,12 +36,12 @@ while($ll=<>){
     chop($ll);
     my @lls = split(/\t/,$ll);
     my $id  = $lls[0];
-    my $rid = $lls[2];
+    my $this_flag = 0;
 
     my $score;
     for ($j=11; $j<=$#lls; $j++) { if ($lls[$j] =~ /AS:i:(.+)/) { $score = $1; last; } }
     if (defined($score)) {
-      $last_filter_flag = 1 if ($score >= $map_score_cutoff);
+      $this_flag = 1 if ($score >= $map_score_cutoff);
     }
 
     my $flag_info = <<EOD;
@@ -63,23 +63,27 @@ EOD
     next unless ($FLAG & 0x0001 );
 
     if    ($id    ne $last_id) {
-      print $last_aln unless ($last_filter_flag);
+      if ($last_aln) {
+        print $last_aln unless ($last_filter_flag);
+      }
       $last_aln = "";
       $last_filter_flag = 0;
     }
     $last_aln .= "$ll\n";
     $last_id = $id;
+    $last_filter_flag = $this_flag if ($this_flag);
 
   } #### alignment section
 }
 
     #### last reads
     if    ($id    ne $last_id) {
-      print $last_aln unless ($last_filter_flag);
+      if ($last_aln) {
+        print $last_aln unless ($last_filter_flag);
+      }
       $last_aln = "";
       $last_filter_flag = 0;
     }
-
 close(OUT) if ($output);
 
 sub usage {
