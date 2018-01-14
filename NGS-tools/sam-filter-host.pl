@@ -61,9 +61,6 @@ EOD
 
     my $FLAG = $lls[1];
     next unless ($FLAG & 0x0001 );
-    next unless ($FLAG & 0x0002 );
-    next if     ($FLAG & 0x0004 );
-    next if     ($FLAG & 0x0008 );
 
     if    ($id    ne $last_id) {
       print $last_aln unless ($last_filter_flag);
