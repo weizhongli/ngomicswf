@@ -36,7 +36,7 @@ while($ll=<>){
     chop($ll);
     my @lls = split(/\t/,$ll);
     my $id  = $lls[0];
-    my $rid = $lls[2];    if ($rid eq "*") {  next; }
+    my $rid = $lls[2];
 
     my $score;
     for ($j=11; $j<=$#lls; $j++) { if ($lls[$j] =~ /AS:i:(.+)/) { $score = $1; last; } }
