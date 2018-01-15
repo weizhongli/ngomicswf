@@ -33,7 +33,7 @@ while($ll = <$fh>) {
     print OUT1 $ll;
   }
   else {
-    print OUT1 $ll;
+    print OUT2 $ll;
   }
   $line++;
 }
