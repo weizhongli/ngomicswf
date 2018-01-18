@@ -19,7 +19,7 @@ my $sam_assembly     = $opts{i};
 my $sam_reference    = $opts{j};
 my $assembly_file    = $opts{s};
 my $output           = $opts{o};
-my $p_cutoff         = $opts{c}; $p_cutoff = 0.5 unless defined($p_cutoff);
+my $p_cutoff         = $opts{c}; $p_cutoff = 0.9 unless defined($p_cutoff);
 my $host_map_score_cutoff = $opts{T};
    $host_map_score_cutoff = 75 unless ($host_map_score_cutoff);
 
@@ -50,6 +50,7 @@ close(TMP);
 
 open(TMP, $sam_assembly) || die "can not open $sam_assembly";
 my %assembly_reads_mapped = ();
+my $assembly_mapped_reads = ();
 while($ll=<TMP>){
   if ($ll =~ /^\@/) { #### headers
     next;
@@ -68,6 +69,7 @@ while($ll=<TMP>){
       $assembly_reads_mapped{$rid} = [];
     }
     push(@{$assembly_reads_mapped{$rid}}, $id);
+    $assembly_mapped_reads{$id} = 1;
   } #### alignment section
 }
 close(TMP);
@@ -93,8 +95,9 @@ while($ll=<TMP>){
 
     my $FLAG = $lls[1];
     next unless ( $FLAG & 0x0040 ); #### count R1 only 
+    next unless ( $assembly_mapped_reads{$id} );
 
-    $read_from_host{$rid} = 1;
+    $read_from_host{$id} = 1;
   } #### alignment section
 }
 close(TMP);
