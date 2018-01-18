@@ -19,7 +19,7 @@ my $sam_assembly     = $opts{i};
 my $sam_reference    = $opts{j};
 my $assembly_file    = $opts{s};
 my $output           = $opts{o};
-my $p_cutoff         = $opts{c}; $p_cutoff = 0.9 unless defined($p_cutoff);
+my $p_cutoff         = $opts{c}; $p_cutoff = 0.8 unless defined($p_cutoff);
 my $host_map_score_cutoff = $opts{T};
    $host_map_score_cutoff = 75 unless ($host_map_score_cutoff);
 
