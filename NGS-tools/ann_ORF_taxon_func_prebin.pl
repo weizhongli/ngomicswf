@@ -172,6 +172,7 @@ while($ll=<TMP>){
   chop($ll);
   next if ($ll =~ /^#/);
   my ($sid, $spid, $sp, $tid, $tname, @lls) = split(/\t/, $ll);
+  next unless ($scaffold_member_orfs{$sid});
   if ($tid =~ /\d+/) {
     $scaffold_2_taxid{$sid} = $tid;
     if (not defined( $taxid_member_scaffolds{$tid} )) {
