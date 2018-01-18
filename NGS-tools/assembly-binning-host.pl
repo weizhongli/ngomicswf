@@ -41,6 +41,7 @@ while($ll=<TMP>){
   my @lls = split(/\t/, $ll);
   if (($lls[1] =~ /\d+/) or ($lls[3] =~ /\d+/)) { #### valid taxid
     print $fh "$ll\n";
+    next;
   }
   push(@assembly_ids, $lls[0]);
   $assembly_2_len{$lls[0]} = $lls[7];
