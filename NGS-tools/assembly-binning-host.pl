@@ -13,7 +13,7 @@
 ## but just bin the possible contigs from host
 use Getopt::Std;
 getopts("i:j:c:s:o:d:r:n:a:t:T:",\%opts);
-die usage() unless ($opts{i} and $opts{j} and $opts{o} and $opts{s} and $opts{a} and $opts{t});
+die usage() unless ($opts{i} and $opts{j} and $opts{o} and $opts{s});
 
 my $sam_assembly     = $opts{i};
 my $sam_reference    = $opts{j};
