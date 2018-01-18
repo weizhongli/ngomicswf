@@ -23,13 +23,14 @@ require "$script_dir/ann_local.pl";
 # annotate ORFs taxon and function, satisfy that ORFs belong to the same 
 # scaffold get same of consistent taxon
 use Getopt::Std;
-getopts("i:r:a:o:e:d:s:t:s:",\%opts);
-die usage() unless ($opts{i} and $opts{r} and $opts{a} and $opts{o} and $opts{t} and $opts{s});
+getopts("i:r:a:o:e:d:s:t:s:x:",\%opts);
+die usage() unless ($opts{i} and $opts{r} and $opts{a} and $opts{o} and $opts{t} and $opts{s} and $opts{x} );
 
 my $bl_file      = $opts{i}; #### blast alignment file in m8 format
 my $clstr_ref    = $opts{r}; #### cluster info
 my $ORF_file     = $opts{a}; #### old ORF
 my $taxon_file   = $opts{t}; #### taxon file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl
+my $taxon_file2  = $opts{x}; #### taxon file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl, for prebin taxids
 my $output       = $opts{o}; #### output ORF file
 my $output_ann   = "$output-ann.txt"; #### output annotation
 my $output_tax   = "$output-tax.txt"; #### output tax 
@@ -53,6 +54,16 @@ while($ll=<TMP>) {
 #0                                            	1        	2	3         	4	5                 	6	7                 	8	9                  	10	11          	12	13               	14    	15                                           	16
 #Escherichia coli str. K-12 substr. MG1655	Bacteria	2	Proteobacteria	1224	Gammaproteobacteria	1236	Enterobacterales	91347	Enterobacteriaceae	543	Escherichia	561	Escherichia coli	562	Escherichia coli str. K-12 substr. MG1655	511145
 
+}
+close(TMP);
+
+open(TMP, $taxon_file2) || die "can not open $taxon_file2";
+while($ll=<TMP>) {
+  chop($ll);
+  next if ($ll =~ /^#/);
+  my ($tid, $rank, @lls) = split(/\t/, $ll);
+  next unless ($rank eq "toprank");
+  $taxon_info{$tid} = [@lls]; #### overwrite existing tid info
 }
 close(TMP);
 
@@ -353,5 +364,8 @@ $script_name -i blast_alignment_file -r cluster_info -a input ORF -o output ORF 
        output-tax.txt
     -e expect_cutoff, default 1e-6
     -s pre-binned assembly file
+    -x taxon info file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl based on blast ref db
+       this is different from -t, -t specify taxon file for kegg reference, -x specify taxon file for ref-genome,
+       which is used to bin assembly
 EOD
 }
