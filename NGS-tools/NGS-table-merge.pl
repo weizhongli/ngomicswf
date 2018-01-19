@@ -29,10 +29,9 @@ my $id_col              = $opts{i}; #### 0-based column for ID, default 0;
 my $ann_cols            = $opts{a}; #### 0-based columns for annotations delimited by ",", defaults none
 my $value_col           = $opts{v}; #### 0-based value column, default -1
    $value_col           = -1 unless (defined $value_col);
-my $output_dir          = $opts{o};
+my $output              = $opts{o};
 my $cutoff              = $opts{c}; #### cutoff values
    $cutoff              = 0  unless (defined $cutoff);
-my $file_wt_path = (split(/\//,$file))[-1];
 
 my @ann_cols = ();if ($ann_cols) { @ann_cols = split(/,/, $ann_cols);}
 
@@ -49,10 +48,8 @@ while($ll=<TMP>){
 close(TMP);
 my $no_samples = $#samples+1;
 
-$cmd = `mkdir $output_dir` unless (-e $output_dir);
 
 if (1) {
-  my $out1 = "$output_dir/$file_wt_path";
   my ($id, $sample, $value);
   my %mat = ();
   my %ids = ();
@@ -101,7 +98,7 @@ if (1) {
 
   $id_name = "ID" unless $id_name;
 
-  open(TOUT, "> $out1") || die "can not write to $out1";
+  open(TOUT, "> $output") || die "can not write to $output";
   print TOUT "$id_name";
   print TOUT "\t", join("\t", @ann_names) if (@ann_cols);
   print TOUT "\t", join("\t", @samples); 
@@ -163,7 +160,7 @@ sub usage {
 this script merge txt files for mulitple samples into larger spreadsheet
 options:
     -i sample_file, e.g. NGS-smaples
-    -o output_dir
+    -o output 
     -f file  em_fast/Bacteria-toprank-abundance.txt
     -i 0-based column for ID, default 0;
     -a 0-based columns for annotations delimited by ",", defaults none
