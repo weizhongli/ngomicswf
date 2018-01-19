@@ -60,14 +60,15 @@ while($ll=<TMP>) {
   if ($ll =~ /^>(\S+)/) {
     my $orf_id = $1;
     $orf_info{$orf_id} = join("\t", ORF_info($ll)) ;
-    if ($orf_id =~ /(scaffold\|\d+)/) {
-      my $sid = $1;
-      $orf_2_scaffold{$orf_id} = $sid;
-      if (not defined( $scaffold_member_orfs{$sid} )) {
-        $scaffold_member_orfs{$sid} = [];
-      } 
-      push(@{$scaffold_member_orfs{$sid}}, $orf_id); 
+    my $sid = $orf_id;
+    if    ($sid =~  /_\d+$/) { $sid =~  s/_\d+$//; } #### prodigal
+    elsif ($sid =~ /\.\d+$/) { $sid =~ s/\.\d+$//; } #### metagene
+
+    $orf_2_scaffold{$orf_id} = $sid;
+    if (not defined( $scaffold_member_orfs{$sid} )) {
+      $scaffold_member_orfs{$sid} = [];
     }
+    push(@{$scaffold_member_orfs{$sid}}, $orf_id);
   }
 } 
 foreach $sid (keys %scaffold_member_orfs) {
@@ -161,7 +162,7 @@ foreach $round (qw/1 2/) {
 
     my @orf_ids = @{$scaffold_member_orfs{$sid}};
     my $num_orfs = $#orf_ids+1;
-    print LOG ">scaffold|$sid\tORFs:$num_orfs\n";
+    print LOG ">$sid\tORFs:$num_orfs\n";
   
     my %taxid_score = ();
     foreach $orf_id (@orf_ids) {
@@ -252,7 +253,7 @@ foreach $sptid (@all_sptids) {
         my $frac1 = 1;
         if ( defined( $orf_2_hit{$orf_id} ) ) {
           my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
-          $ann = $ref_2_ann{$rid}; 
+          $ann = $ref_2_ann{$rid} if (defined($ref_2_ann{$rid}));
           $iden1 = "$iden%";
           $frac1 = $frac;
           $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));

@@ -85,7 +85,7 @@ while($ll=<TMP>) {
     if (not defined( $scaffold_member_orfs{$sid} )) {
       $scaffold_member_orfs{$sid} = [];
     } 
-    push(@{$scaffold_member_orfs{$sid}}, $orf_id); 
+    push(@{$scaffold_member_orfs{$sid}}, $orf_id);
   }
 } 
 foreach $sid (keys %scaffold_member_orfs) {
@@ -290,7 +290,7 @@ foreach $sptid (@all_sptids) {
         my $frac1 = 1;
         if ( defined( $orf_2_hit{$orf_id} ) ) {
           my ($rid, $iden, $alnln, $frac) = @{ $orf_2_hit{$orf_id} };
-          $ann = $ref_2_ann{$rid}; 
+          $ann = $ref_2_ann{$rid} if (defined($ref_2_ann{$rid}));
           $iden1 = "$iden%";
           $frac1 = $frac;
           $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
