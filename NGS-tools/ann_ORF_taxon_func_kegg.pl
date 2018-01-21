@@ -278,12 +278,12 @@ foreach $i (@p) {
     next unless ($no>0);
     $abs          = float_e6($abs     / $no);
     $abs_adj      = float_e6($abs_adj / $no);
-    my $r_abs     = float_e6($sbs     / $sum_abs);
+    my $r_abs     = float_e6($abs     / $sum_abs);
     my $r_abs_adj = float_e6($abs_adj / $sum_abs_adj);
 
     my $cov = float_e3( $no/($#member_KOs+1) ) ;
     if ($level_is_ko{$i} and defined($ko_des{substr($j, 2)}) ) {
-      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t", $ko_des{substr($j, 2)}, "\t$r_abs\t$r_abs_adj\n";
+      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t", $ko_des{substr($j, 2)}, "\n";
     }
     else {
       print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
