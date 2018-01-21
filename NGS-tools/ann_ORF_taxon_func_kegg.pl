@@ -214,7 +214,7 @@ while($ll=<TMP>) {
   $KO_abs{$KO} += $fr;
   $KO_abs_adj{$KO} += $fr * $depth;
   $sum_abs += $fr;
-  $sub_abs_adj += $fr*$depth;
+  $sum_abs_adj += $fr*$depth;
 } 
 close(TMP);
 
@@ -224,11 +224,11 @@ print OUT "#KO\tDepth\tDepth_adj\tAbundance\tAbundance_adj\tDescription\n";
 my @found_KOs = sort keys %KO_abs;
 foreach $KO (@found_KOs) {
   next unless ( $KO_des{$KO} ); #### unless this KO is in scope
-  my $abs = $KO_abs{$KO};
-  my $abs_adj = $KO_abs_adj{$KO};
-  my $abs_nor = int($abs / $sum_abs * 1000000) / 1000000;
-  my $abs_adj_nor = int($abs_adj  / $sub_abs_adj * 1000000) / 1000000;
-  print OUT "$KO\t$abs\t$abs_adj\t$abs_nor\t$abs_adj_nor\t$KO_des{$KO}\n";
+  my $abs       = $KO_abs{$KO};
+  my $abs_adj   = $KO_abs_adj{$KO};
+  my $r_abs     = float_e6( $abs    /$sum_abs );
+  my $r_abs_adj = float_e6( $abs_adj/$sum_abs_adj );
+  print OUT "$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t$KO_des{$KO}\n";
 }
 close(OUT);
 
@@ -241,11 +241,30 @@ foreach $i (@p) {
   open(OUT, "> $output_ann") || die "can not write to $output_ann";
 
   if ($level_is_ko{$i}) {
-    print OUT "#ko\tMember_KOs\tFound_KOs\tCoverage\tAbundance\tAbundance_adj\tDescription\n";
+    print OUT     "#ko\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\tAbundance\tAbundance_adj\tDescription\n";
   }
   else {
-    print OUT "#Cluster\tMember_KOs\tFound_KOs\tCoverage\tAbundance\tAbundance_adj\n";
+    print OUT "#Cluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
   }
+  $sum_abs=0;
+  $sum_abs_adj = 0;
+
+  foreach $j (@clusters) { #### loop one to get sum
+    my @member_KOs = @{ $cluster_member_KOs{$j} };
+    my $abs = 0;
+    my $abs_adj = 0;
+    my $no = 0;
+    foreach $KO (@member_KOs) {
+      $no ++                       if ($KO_abs{$KO});
+      $abs     += $KO_abs{$KO}     if ($KO_abs{$KO});
+      $abs_adj += $KO_abs_adj{$KO} if ($KO_abs_adj{$KO});
+    }
+    next unless ($no>0);
+    $sum_abs +=  $abs / $no;
+    $sum_abs_adj += $abs_adj / $no;
+  }
+  next unless ($sum_abs>0);
+
   foreach $j (@clusters) {
     my @member_KOs = @{ $cluster_member_KOs{$j} };
     my $abs = 0;
@@ -257,17 +276,31 @@ foreach $i (@p) {
       $abs_adj += $KO_abs_adj{$KO} if ($KO_abs_adj{$KO});
     }
     next unless ($no>0);
-    my $cov = int( $no / ($#member_KOs+1) * 1000) / 1000;
+    $abs          = float_e6($abs     / $no);
+    $abs_adj      = float_e6($abs_adj / $no);
+    my $r_abs     = float_e6($sbs     / $sum_abs);
+    my $r_abs_adj = float_e6($abs_adj / $sum_abs_adj);
+
+    my $cov = float_e3( $no/($#member_KOs+1) ) ;
     if ($level_is_ko{$i} and defined($ko_des{substr($j, 2)}) ) {
-      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t", $ko_des{substr($j, 2)}, "\n";
+      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t", $ko_des{substr($j, 2)}, "\t$r_abs\t$r_abs_adj\n";
     }
     else {
-      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\n";
+      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
     }
   }
   close(OUT);
 }
 
+sub float_e3 {
+  my $f = shift;
+  return int($f*1000) / 1000;
+}
+
+sub float_e6 {
+  my $f = shift;
+  return int($f*1000000) / 1000000;
+}
 
 sub usage {
 <<EOD;
