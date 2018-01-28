@@ -23,8 +23,8 @@ require "$script_dir/ann_local.pl";
 # annotate ORFs taxon and function, satisfy that ORFs belong to the same 
 # scaffold get same of consistent taxon
 use Getopt::Std;
-getopts("i:r:a:o:e:d:s:t:s:x:",\%opts);
-die usage() unless ($opts{i} and $opts{r} and $opts{a} and $opts{o} and $opts{t} and $opts{s} and $opts{x} );
+getopts("i:r:a:o:e:d:s:t:s:x:p:",\%opts);
+die usage() unless ($opts{i} and $opts{r} and $opts{a} and $opts{o} and $opts{t} and $opts{s} and $opts{x} and $opts{p});
 
 my $bl_file      = $opts{i}; #### blast alignment file in m8 format
 my $clstr_ref    = $opts{r}; #### cluster info
@@ -35,6 +35,7 @@ my $output       = $opts{o}; #### output ORF file
 my $output_ann   = "$output-ann.txt"; #### output annotation
 my $output_tax   = "$output-tax.txt"; #### output tax 
 my $output_log   = "$output-ann.log";
+my $output_sca   = $opts{p};
 my $cutoff_e     = $opts{e}; 
    $cutoff_e     = 1e-6 unless defined($cutoff_e);
 my $assembly_bin = $opts{s};
@@ -166,14 +167,18 @@ close(TMP);
 my %scaffold_2_taxid = ();
 my %taxid_member_scaffolds = ();
 my %taxid_orf_count = ();
-
+my %unbinned_scaffold = ();
+my $scaffold_2_len = ();
 #### round 0, take what is assigned from assembly-bin
 open(TMP, $assembly_bin) || die "can not open $assembly_bin";
 while($ll=<TMP>){
   chop($ll);
   next if ($ll =~ /^#/);
   my ($sid, $spid, $sp, $tid, $tname, @lls) = split(/\t/, $ll);
-  next unless ($scaffold_member_orfs{$sid});
+
+  next if ($tid eq "Host");
+  $scaffold_2_len{$sid} = $lls[-1];
+  #next unless ($scaffold_member_orfs{$sid});
   if ($tid =~ /\d+/) {
     $scaffold_2_taxid{$sid} = $tid;
     if (not defined( $taxid_member_scaffolds{$tid} )) {
@@ -181,7 +186,10 @@ while($ll=<TMP>){
       $taxid_orf_count{$tid} = 0;
     }
     push(@{ $taxid_member_scaffolds{$tid} }, $sid);
-    $taxid_orf_count{$tid} += $scaffold_orf_count{$sid};
+    $taxid_orf_count{$tid} += $scaffold_orf_count{$sid} if (defined($scaffold_orf_count{$sid}));
+  }
+  else {
+    $unbinned_scaffold{$sid} = 1;
   }
 }
 close(TMP);
@@ -242,6 +250,7 @@ foreach $round (qw/1 2/) {
       $taxid_orf_count{$tid} = 0;
     }
     push(@{ $taxid_member_scaffolds{$tid} }, $sid);
+    delete $unbinned_scaffold{$sid};
     $taxid_orf_count{$tid} += $scaffold_orf_count{$sid};
   }
 }
@@ -253,8 +262,10 @@ close(LOG);
 ######################### output annotation table
 open(OUT, "> $output_ann") || die "can not write to $output_ann";
 open(TAX, "> $output_tax") || die "can not write to $output_tax";
+open(SCA, "> $output_sca") || die "can not write to $output_sca";
 print TAX "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tNumber_scaffolds\tNumber_ORFs\n";
 print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFrac_alignment\tFamily\tDescription\n";
+print SCA "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tLength\tNumber_ORFs\n";
 #### output annotation with taxid
 my @all_tids = keys %taxid_member_scaffolds;
    @all_tids = sort { $taxid_orf_count{$b} <=> $taxid_orf_count{$a} } @all_tids;
@@ -283,6 +294,10 @@ foreach $sptid (@all_sptids) {
     print TAX "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t", $#sids+1, "\t$taxid_orf_count{$tid}\n";
     foreach $sid (@sids) {
       my @orf_ids = @{$scaffold_member_orfs{$sid}};
+      my $num_orfs = $#orf_ids+1;
+      print SCA "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\n";
+      next unless ($num_orfs>0);
+
       foreach $orf_id (@orf_ids) {
         my $ann = "hypothetical protein";
         my $KO  = "";
@@ -304,10 +319,18 @@ foreach $sptid (@all_sptids) {
 #### output scaffolds without taxid
 my $no_unknown_sid = 0;
 my $no_unknown_orf = 0;
-foreach $sid (@all_sids) {
+my @unbinned = keys %unbinned_scaffold;
+   @unbinned = sort { $scaffold_2_len{$b} <=> $scaffold_2_len{$a} } @unbinned;
+
+#foreach $sid (@all_sids) {
+foreach $sid (@unbinned) {
   next if defined($scaffold_2_taxid{$sid});
   my $tid = "Unknown";
   my @orf_ids = @{$scaffold_member_orfs{$sid}};
+  my $num_orfs = $#orf_ids+1;
+  print SCA "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\n";
+  next unless ($num_orfs>0);
+
   foreach $orf_id (@orf_ids) {
     my $ann = "hypothetical protein";
     my $KO  = "";
@@ -328,7 +351,7 @@ foreach $sid (@all_sids) {
 print TAX "unknown\t$no_unknown_sid\t$no_unknown_orf\n";
 close(OUT);
 close(TAX);
-
+close(SCA);
 
 sub ORF_info {
   my $ll = shift;
