@@ -39,7 +39,7 @@ my $flag = 0;
 if ($seq_file =~ /.gz$/) { open(TMP, "gunzip < $seq_file | ") || die "can not gunzip $seq_file"; }
 else                     { open(TMP, $seq_file              ) || die; }
 while($ll = <TMP>) {
-  if ($ll =~ /^>/) {
+  if ($ll =~ /^\@/) {
     if ($id_str) {
       if ($ll =~ /$id_str\|(\d+)/) {
         $seqid = $1;
@@ -50,21 +50,24 @@ while($ll = <TMP>) {
       chop($seqid);
       $seqid =~ s/\s.+$//;
     }
-    $flag = ( $seqid1{$seqid} ) ? 0 : 1;
+    $flag = ( $seqid1{$seqid} ) ? 1 : 0;
+    print $fh $ll  if ($flag);
+    $a=<TMP>; print $fh $a if ($flag);
+    $a=<TMP>; print $fh $a if ($flag);
+    $a=<TMP>; print $fh $a if ($flag);
   }
-  print $fh $ll  if ($flag);
 }
 close(TMP);
 close(OUT) if ($output);
 
 sub usage {
 <<EOD;
-fetch subset of sequences by excluding IDs
+fetch subset of sequences by IDs
 
 $script_name -i sequence_id_file -s original_fastq_sequence file -o output
 
   -i input file of sequence IDs,  one ID per line, ID must be the first column, - for stdin
-  -s original fasta file
+  -s original fastq file
   -o output, default STDOUT
   -a ID string, optional, if it is supplied, it will match sequence id with ID_string|ID
      for example, if with -a taxid, the input file can be a list of taxids and the sequence name
