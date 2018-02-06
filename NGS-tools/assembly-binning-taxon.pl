@@ -13,7 +13,7 @@
 ## added taxon parsing function
 ## parse from taxid and get species taxid from taxon file
 use Getopt::Std;
-getopts("i:j:c:s:o:d:r:n:a:t:",\%opts);
+getopts("i:j:c:s:o:d:r:n:a:t:x:",\%opts);
 die usage() unless ($opts{i} and $opts{j} and $opts{o} and $opts{s} and $opts{a} and $opts{t});
 
 my $sam_assembly     = $opts{i};
@@ -24,9 +24,21 @@ my $n_cutoff         = $opts{n}; $n_cutoff = 10  unless defined($n_cutoff);
 my $p_cutoff         = $opts{c}; $p_cutoff = 0.5 unless defined($p_cutoff);
 my $tax_str          = $opts{a};
 my $taxon_file       = $opts{t}; #### taxon file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl
-
+my $contaminant_file = $opts{x}; 
 
 my ($i, $j, $k, $ll, $cmd);
+
+my %contaminant_tids = ();
+if ($contaminant_file) {
+  open(TMP, $contaminant_file) || die "can not open $contaminant_file";
+  while($ll=<TMP>) {
+    chop($ll);
+    next if ($ll =~ /^#/);
+    my @ll = split(/\s+/, $ll);
+    $contaminant_tids{$lls[0]} = 1;
+  }
+  close(TMP);
+}
 
 my %tid_2_sptid = ();
 my %taxon_info = ();
@@ -179,6 +191,12 @@ foreach $i (@assembly_ids) {
 
   }
 
+  if ($contaminant_tids{$taxid}) {
+     $sp_name = "sptid:$sptid";
+     $strain_name = "taxid:$taxid";
+     $taxid = "contaminant";
+     $sptid = "contaminant";
+  }
   print OUT "$i\t$sptid\t$sp_name\t$taxid\t$strain_name\t$p\t$n_reads\t$assembly_2_len{$i}\n";
 
 }
@@ -214,6 +232,7 @@ usage:
        here 12345 is the taxon ID. in this case, use -a tid so that the script can 
        parse the taxon ID 
     -t taxon info file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl based on blast ref db
+    -x taxids of contaminants, optional, if exist, will label these as Contaminant
 
 EOD
 }
