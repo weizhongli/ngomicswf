@@ -43,6 +43,10 @@ while($ll=<TMP>){
     print $fh "$ll\n";
     next;
   }
+  elsif ( $lls[1] =~ /contaminant/i ) {
+    print $fh "$ll\n";
+    next;
+  }
   push(@assembly_ids, $lls[0]);
   $assembly_2_len{$lls[0]} = $lls[7];
 }
