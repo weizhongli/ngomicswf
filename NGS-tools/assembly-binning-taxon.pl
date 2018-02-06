@@ -78,7 +78,7 @@ while($ll=<TMP>){
     my $id  = $lls[0];
     my $rid = $lls[2];    if ($rid eq "*") {  next; }
     my $FLAG = $lls[1];
-    next unless ( $FLAG & 0x0040 ); #### count R1 only 
+    # next unless ( $FLAG & 0x0040 ); #### count R1 only 
 
     if (not defined($assembly_reads_mapped{$rid})) {
       $assembly_reads_mapped{$rid} = [];
@@ -105,12 +105,13 @@ while($ll=<TMP>){
     if ($rid =~ /$tax_str\|(\d+)/) { $tid = $1; } else { next; }
 
     my $FLAG = $lls[1];
-    next unless ( $FLAG & 0x0040 ); #### count R1 only 
+    # next unless ( $FLAG & 0x0040 ); #### count R1 only 
 
     if    (($id  ne $last_id) and $last_id ) {
       my @t_taxids = keys %t_taxids;
       if ($#t_taxids+1 <= $n_cutoff) {
-        $read_2_taxids{$last_id} = [@t_taxids];
+        #### if already defined by R1
+        $read_2_taxids{$last_id} = [@t_taxids] unless (defined($read_2_taxids{$last_id}));
       }
       %t_taxids = ();
     }
@@ -123,7 +124,8 @@ close(TMP);
     if    (($id  ne $last_id) and $last_id ) {
       my @t_taxids = keys %t_taxids;
       if ($#t_taxids+1 <= $n_cutoff) {
-        $read_2_taxids{$last_id} = [@t_taxids];
+        #### if already defined by R1
+        $read_2_taxids{$last_id} = [@t_taxids] unless (defined($read_2_taxids{$last_id}));
       }
     }
 
