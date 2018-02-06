@@ -34,7 +34,7 @@ if ($contaminant_file) {
   while($ll=<TMP>) {
     chop($ll);
     next if ($ll =~ /^#/);
-    my @ll = split(/\s+/, $ll);
+    my @lls = split(/\s+/, $ll);
     $contaminant_tids{$lls[0]} = 1;
   }
   close(TMP);
