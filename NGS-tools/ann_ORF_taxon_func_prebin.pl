@@ -328,7 +328,7 @@ foreach $sid (@unbinned) {
   my $tid = "Unknown";
   my $num_orfs = 0;
   my @orf_ids = ();
-  if (defined( $scaffold_member_orfs{$sid} ) {
+  if (defined( $scaffold_member_orfs{$sid} )) {
     @orf_ids = @{$scaffold_member_orfs{$sid}};
     $num_orfs = $#orf_ids+1;
   }
