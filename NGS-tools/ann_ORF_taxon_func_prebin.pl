@@ -326,8 +326,12 @@ my @unbinned = keys %unbinned_scaffold;
 foreach $sid (@unbinned) {
   next if defined($scaffold_2_taxid{$sid});
   my $tid = "Unknown";
-  my @orf_ids = @{$scaffold_member_orfs{$sid}};
-  my $num_orfs = $#orf_ids+1;
+  my $num_orfs = 0;
+  my @orf_ids = ();
+  if (defined( $scaffold_member_orfs{$sid} ) {
+    @orf_ids = @{$scaffold_member_orfs{$sid}};
+    $num_orfs = $#orf_ids+1;
+  }
   print SCA "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\n";
   next unless ($num_orfs>0);
 
