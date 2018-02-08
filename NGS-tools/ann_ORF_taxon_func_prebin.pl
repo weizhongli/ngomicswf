@@ -177,6 +177,7 @@ while($ll=<TMP>){
   my ($sid, $spid, $sp, $tid, $tname, @lls) = split(/\t/, $ll);
 
   next if ($tid eq "Host");
+  next if ($tid eq "contaminant");
   $scaffold_2_len{$sid} = $lls[-1];
   #next unless ($scaffold_member_orfs{$sid});
   if ($tid =~ /\d+/) {
