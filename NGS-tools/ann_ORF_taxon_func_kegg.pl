@@ -307,7 +307,7 @@ foreach $j (@g_levels) {
   print OUT "\t$j";
   print OUT "\tko" if ($level_is_ko{$j});
 }
-print OUT "KO\tDescription\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
+print OUT "\tKO\tDescription\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
 
 $i00 = 1;
 for $i (@full_KO_link) {
@@ -331,8 +331,7 @@ for $i (@full_KO_link) {
     $r_abs     = float_e6( $abs    /$g_sum_abs );
     $r_abs_adj = float_e6( $abs_adj/$g_sum_abs_adj );
   }
-  print OUT "$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
-
+  print OUT "\t$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
 }
 close(OUT);
 
