@@ -130,6 +130,8 @@ my %level_is_ko = ();
 my %KO_des = ();
 my %ko_des = ();
 my %cluster_member_KOs = ();
+my @full_KO_link = ();
+my %global_levels = ();
 
 while($ll=<TMP>){
   last if ($ll =~ /^!/);   #### finish last block
@@ -158,7 +160,8 @@ while($ll=<TMP>){
         $cluster_member_KOs{$j} = [];
       }
       push(@{ $cluster_member_KOs{$j} }, $KO);
-    }    
+    }
+    push(@full_KO_link, [$KO, %current_ABCDE_des]);    
   }
   else {
     my $t_ko = "";
@@ -182,6 +185,7 @@ while($ll=<TMP>){
     }
     $current_ABCDE_des{$level} = $txt;
     $current_ABCDE_des{$level} = $t_ko if ($t_ko);
+    $global_levels{$level} = 1;
   }
 }
 close(TMP);
@@ -231,6 +235,8 @@ foreach $KO (@found_KOs) {
   print OUT "$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t$KO_des{$KO}\n";
 }
 close(OUT);
+my $g_sum_abs = $sum_abs;
+my $g_sum_abs_adj = $sum_abs_adj;
 
 my @p = qw/D C B A/;
 foreach $i (@p) {
@@ -291,6 +297,45 @@ foreach $i (@p) {
   }
   close(OUT);
 }
+
+
+
+open(OUT, "> $output-raw") || die "can not write to $output-raw";
+
+print OUT "#ID";
+foreach $j (@g_levels) {
+  print OUT "\t$j";
+  print OUT "\tko" if ($level_is_ko{$j});
+}
+print OUT "KO\tDescription\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
+
+$i00 = 1;
+my @g_levels = sort keys %global_levels;
+for $i (@full_KO_link) {
+  my ($KO, %ABCDE_des) = @{ $i };
+  my @ABC = sort keys %ABCDE_des;
+
+  print OUT "$i00"; $i00++;
+  foreach $j (@g_levels) {
+    my $des = "";
+    $des = $ABCDE_des{$j} if defined($ABCDE_des{$j});
+    print OUT "\t$des";
+    if ($level_is_ko{$j}) {
+      print OUT "\t$ko_des{$des}";
+    }
+  }
+  print OUT "$KO\t$KO_des{$KO}";
+  my ($abs, $abs_adj, $r_abs, $r_abs_adj) = ("","","","");
+  if (defined ($KO_abs{$KO})) {
+    $abs       = $KO_abs{$KO};
+    $abs_adj   = $KO_abs_adj{$KO};
+    $r_abs     = float_e6( $abs    /$g_sum_abs );
+    $r_abs_adj = float_e6( $abs_adj/$g_sum_abs_adj );
+  }
+  print OUT "$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
+
+}
+close(OUT);
 
 sub float_e3 {
   my $f = shift;
