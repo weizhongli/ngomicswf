@@ -320,10 +320,10 @@ for $i (@full_KO_link) {
     $des = $ABCDE_des{$j} if defined($ABCDE_des{$j});
     print OUT "\t$des";
     if ($level_is_ko{$j}) {
-      print OUT "\t$ko_des{$des}";
+      print OUT (defined($ko_des{$des})) ? : "\t$ko_des{$des}" : "\t$des";
     }
   }
-  print OUT "$KO\t$KO_des{$KO}";
+  print OUT "\t$KO\t$KO_des{$KO}";
   my ($abs, $abs_adj, $r_abs, $r_abs_adj) = qw/0 0 0 0/;
   if (defined ($KO_abs{$KO})) {
     $abs       = $KO_abs{$KO};
@@ -331,7 +331,7 @@ for $i (@full_KO_link) {
     $r_abs     = float_e6( $abs    /$g_sum_abs );
     $r_abs_adj = float_e6( $abs_adj/$g_sum_abs_adj );
   }
-  print OUT "\t$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
+  print OUT "\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
 }
 close(OUT);
 
