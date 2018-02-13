@@ -301,7 +301,7 @@ foreach $i (@p) {
 
 
 open(OUT, "> $output-raw") || die "can not write to $output-raw";
-
+my @g_levels = sort keys %global_levels;
 print OUT "#ID";
 foreach $j (@g_levels) {
   print OUT "\t$j";
@@ -310,7 +310,6 @@ foreach $j (@g_levels) {
 print OUT "KO\tDescription\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
 
 $i00 = 1;
-my @g_levels = sort keys %global_levels;
 for $i (@full_KO_link) {
   my ($KO, %ABCDE_des) = @{ $i };
   my @ABC = sort keys %ABCDE_des;
@@ -325,7 +324,7 @@ for $i (@full_KO_link) {
     }
   }
   print OUT "$KO\t$KO_des{$KO}";
-  my ($abs, $abs_adj, $r_abs, $r_abs_adj) = ("","","","");
+  my ($abs, $abs_adj, $r_abs, $r_abs_adj) = qw/0 0 0 0/;
   if (defined ($KO_abs{$KO})) {
     $abs       = $KO_abs{$KO};
     $abs_adj   = $KO_abs_adj{$KO};
