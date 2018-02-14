@@ -309,7 +309,7 @@ foreach $j (@g_levels) {
 }
 print OUT "\tKO\tDescription\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
 
-$i00 = 1;
+$i00 = 1000001;
 for $i (@full_KO_link) {
   my ($KO, %ABCDE_des) = @{ $i };
   my @ABC = sort keys %ABCDE_des;

@@ -32,6 +32,7 @@ my $value_col           = $opts{v}; #### 0-based value column, default -1
 my $output              = $opts{o};
 my $cutoff              = $opts{c}; #### cutoff values
    $cutoff              = 0  unless (defined $cutoff);
+my $sort_flag           = $opts{t}; $sort_flag = 1 unless (defined $sort_flag);
 
 my @ann_cols = ();if ($ann_cols) { @ann_cols = split(/,/, $ann_cols);}
 
@@ -84,7 +85,7 @@ if (1) {
     close(TMP);
   }
 
-  my @ids = sort {$a <=> $b} keys %ids;
+  my @ids = sort keys %ids;
   my %id_2_stat=();
   foreach $id (@ids) {
     my @vv=();
@@ -105,7 +106,7 @@ if (1) {
   print TOUT "\tmax\tmin\tmed\tmean\trange\tlow_quartile\thigh_quartile" if ($no_samples>0);
   print TOUT "\n";
 
-     @ids = sort {$id_2_stat{$b}->[0] <=> $id_2_stat{$a}->[0]} @ids if ($no_samples>0);
+     @ids = sort {$id_2_stat{$b}->[0] <=> $id_2_stat{$a}->[0]} @ids if ($no_samples>0) if ($sort_flag);
 
   foreach $id (@ids) {
     print TOUT $id;
