@@ -106,7 +106,7 @@ if (1) {
   print TOUT "\tmax\tmin\tmed\tmean\trange\tlow_quartile\thigh_quartile" if ($no_samples>0);
   print TOUT "\n";
 
-     @ids = sort {$id_2_stat{$b}->[0] <=> $id_2_stat{$a}->[0]} @ids if ($no_samples>0) if ($sort_flag);
+     @ids = sort {$id_2_stat{$b}->[0] <=> $id_2_stat{$a}->[0]} @ids if (($no_samples>0) and $sort_flag);
 
   foreach $id (@ids) {
     print TOUT $id;
