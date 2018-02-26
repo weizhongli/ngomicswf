@@ -255,7 +255,7 @@ my $g_sum_abs_adj = $sum_abs_adj;
 my @p = qw/D C B A/;
 foreach $i (@p) {
   my @clusters = sort grep {/^$i/} keys %cluster_member_KOs;
-  @cluster  = sort { $global_order{$a} <=>  $global_order{$b} } @cluster;
+  @clusters  = sort { $global_order{$a} <=>  $global_order{$b} } @clusters;
   next unless (@clusters);
 
   my $output_ann = "$output-$i";
