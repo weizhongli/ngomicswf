@@ -275,13 +275,6 @@ foreach $i (@p) {
   else {                  print OUT             "\tCluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
 
   foreach $j (@clusters) {
-    if ( $non_KO_link{$j} ) {
-      my %link = @{ $non_KO_link{$j} };
-      my @link = sort keys %link;
-      foreach $k (@link) {
-        print OUT "$link{$k}\t";
-      }
-    } 
     my @member_KOs = @{ $cluster_member_KOs{$j} };
     my $abs = 0;
     my $abs_adj = 0;
@@ -291,7 +284,15 @@ foreach $i (@p) {
       $abs     += $KO_abs{$KO}     if ($KO_abs{$KO});
       $abs_adj += $KO_abs_adj{$KO} if ($KO_abs_adj{$KO});
     }
-    next unless ($no>0);
+
+    if ( $non_KO_link{$j} ) {
+      my %link = @{ $non_KO_link{$j} };
+      my @link = sort keys %link;
+      foreach $k (@link) {
+        print OUT "$link{$k}\t";
+      }
+    } 
+
     $abs          = float_e6($abs     / $no);
     $abs_adj      = float_e6($abs_adj / $no);
 
