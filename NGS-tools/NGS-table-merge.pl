@@ -19,7 +19,7 @@ my $script_dir = $0;
 
 use Getopt::Std;
 
-getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:",\%opts);
+getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:p:",\%opts);
 die usage() unless (defined($opts{i}) and $opts{s} and $opts{o} and $opts{f});
 
 my $sample_file         = $opts{s}; #### NGS-samples
@@ -33,6 +33,7 @@ my $output              = $opts{o};
 my $cutoff              = $opts{c}; #### cutoff values
    $cutoff              = 0  unless (defined $cutoff);
 my $sort_flag           = $opts{t}; $sort_flag = 1 unless (defined $sort_flag);
+my $stat_flag           = $opts{p}; $stat_flag = 0 unless (defined $stat_flag);
 
 my @ann_cols = ();if ($ann_cols) { @ann_cols = split(/,/, $ann_cols);}
 
@@ -103,10 +104,10 @@ if (1) {
   print TOUT "$id_name";
   print TOUT "\t", join("\t", @ann_names) if (@ann_cols);
   print TOUT "\t", join("\t", @samples); 
-  print TOUT "\tmax\tmin\tmed\tmean\trange\tlow_quartile\thigh_quartile" if ($no_samples>0);
+  print TOUT "\tmax\tmin\tmed\tmean\trange\tlow_quartile\thigh_quartile" if ($no_samples>0 and $stat_flag);
   print TOUT "\n";
 
-     @ids = sort {$id_2_stat{$b}->[0] <=> $id_2_stat{$a}->[0]} @ids if (($no_samples>0) and $sort_flag);
+     @ids = sort {$id_2_stat{$b}->[0] <=> $id_2_stat{$a}->[0]} @ids if (($no_samples>0) and $sort_flag and $stat_flag);
 
   foreach $id (@ids) {
     print TOUT $id;
@@ -116,7 +117,7 @@ if (1) {
          $v1 = 0 unless defined($v1);
       print TOUT "\t$v1";
     }
-    print TOUT "\t", join("\t", @{$id_2_stat{$id}}) if ($no_samples>0);
+    print TOUT "\t", join("\t", @{$id_2_stat{$id}}) if ($no_samples>0 and $stat_flag);
     print TOUT "\n";
   }
   close(TOUT);

@@ -128,11 +128,14 @@ while($ll=<TMP>){
 my %current_ABCDE_des = ();
 my %level_is_ko = ();
 my %KO_des = ();
-my %ko_des = ();
+my %ko_des = (); #### ko, MO or BR elements
 my %cluster_member_KOs = ();
 my @full_KO_link = ();
 my %global_levels = ();
+my %global_order = ();
+my %non_KO_link = ();
 
+my $i00 = 0;
 while($ll=<TMP>){
   last if ($ll =~ /^!/);   #### finish last block
   next if ($ll =~ /^#/);
@@ -183,9 +186,18 @@ while($ll=<TMP>){
       $ko_des{$t_ko} = $txt;
       $level_is_ko{$level} = 1;
     }
+    if ($t_ko) {
+      $non_KO_link{$t_ko} = [%current_ABCDE_des];
+    }
+    elsif ($level ne 'A') {
+      $non_KO_link{$txt} = [%current_ABCDE_des];
+    }
+
     $current_ABCDE_des{$level} = $txt;
     $current_ABCDE_des{$level} = $t_ko if ($t_ko);
-    $global_levels{$level} = 1;
+    if ($t_ko) { $global_order{"$level $t_ko"} = $i00; }
+    else       { $global_order{"$level $txt"} = $i00; }
+    $i00++;
   }
 }
 close(TMP);
@@ -241,37 +253,28 @@ my $g_sum_abs_adj = $sum_abs_adj;
 my @p = qw/D C B A/;
 foreach $i (@p) {
   my @clusters = sort grep {/^$i/} keys %cluster_member_KOs;
+  @cluster  = sort { $global_order{$a} <=>  $global_order{$b} } @cluster;
   next unless (@clusters);
 
   my $output_ann = "$output-$i";
   open(OUT, "> $output_ann") || die "can not write to $output_ann";
 
-  if ($level_is_ko{$i}) {
-    print OUT     "#ko\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\tAbundance\tAbundance_adj\tDescription\n";
-  }
-  else {
-    print OUT "#Cluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
-  }
-  $sum_abs=0;
-  $sum_abs_adj = 0;
+  if    ($i eq "B") { print OUT "#A"; }
+  elsif ($i eq "C") { print OUT "#A\tB"; }
+  elsif ($i eq "D") { print OUT "#A\tB\tC"; }
+  elsif ($i eq "E") { print OUT "#A\tB\tC\tD"; }
 
-  foreach $j (@clusters) { #### loop one to get sum
-    my @member_KOs = @{ $cluster_member_KOs{$j} };
-    my $abs = 0;
-    my $abs_adj = 0;
-    my $no = 0;
-    foreach $KO (@member_KOs) {
-      $no ++                       if ($KO_abs{$KO});
-      $abs     += $KO_abs{$KO}     if ($KO_abs{$KO});
-      $abs_adj += $KO_abs_adj{$KO} if ($KO_abs_adj{$KO});
-    }
-    next unless ($no>0);
-    $sum_abs +=  $abs / $no;
-    $sum_abs_adj += $abs_adj / $no;
-  }
-  next unless ($sum_abs>0);
+  if ($level_is_ko{$i}) { print OUT     "\tko\tDescription\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
+  else {                  print OUT             "\tCluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
 
   foreach $j (@clusters) {
+    if ( $non_KO_link{$j} ) {
+      my %link = @{ $non_KO_link{$j} };
+      my @link = sort keys %link;
+      foreach $k (@link) {
+        print OUT "$non_KO_link{$k}\t";
+      }
+    } 
     my @member_KOs = @{ $cluster_member_KOs{$j} };
     my $abs = 0;
     my $abs_adj = 0;
@@ -284,23 +287,19 @@ foreach $i (@p) {
     next unless ($no>0);
     $abs          = float_e6($abs     / $no);
     $abs_adj      = float_e6($abs_adj / $no);
-    my $r_abs     = float_e6($abs     / $sum_abs);
-    my $r_abs_adj = float_e6($abs_adj / $sum_abs_adj);
 
     my $cov = float_e3( $no/($#member_KOs+1) ) ;
     if ($level_is_ko{$i} and defined($ko_des{substr($j, 2)}) ) {
-      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t", $ko_des{substr($j, 2)}, "\n";
+      print OUT substr($j, 2), "\t", $ko_des{substr($j, 2)}, "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\n";
     }
     else {
-      print OUT substr($j, 2), "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
+      print OUT substr($j, 2), "\t",                               $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\n";
     }
   }
   close(OUT);
 }
 
-
-
-open(OUT, "> $output-raw") || die "can not write to $output-raw";
+open(OUT, "> $output-full-des") || die "can not write to $output-full-des";
 my @g_levels = sort keys %global_levels;
 print OUT "#ID";
 foreach $j (@g_levels) {
