@@ -183,14 +183,15 @@ while($ll=<TMP>){
     elsif ($txt =~ /\[PATH:(ko\d+)\]/) {
       $t_ko = $1;
       $txt =~ s/\s+\[PATH:ko\d+\]//;
+      $txt =~ s/\d+\s+//;
       $ko_des{$t_ko} = $txt;
       $level_is_ko{$level} = 1;
     }
     if ($t_ko) {
-      $non_KO_link{$t_ko} = [%current_ABCDE_des];
+      $non_KO_link{"$level $t_ko"} = [%current_ABCDE_des];
     }
     elsif ($level ne 'A') {
-      $non_KO_link{$txt} = [%current_ABCDE_des];
+      $non_KO_link{"$level $txt"} = [%current_ABCDE_des];
     }
 
     $current_ABCDE_des{$level} = $txt;
@@ -198,6 +199,7 @@ while($ll=<TMP>){
     if ($t_ko) { $global_order{"$level $t_ko"} = $i00; }
     else       { $global_order{"$level $txt"} = $i00; }
     $i00++;
+    $global_levels{$level} = 1;
   }
 }
 close(TMP);
@@ -272,7 +274,7 @@ foreach $i (@p) {
       my %link = @{ $non_KO_link{$j} };
       my @link = sort keys %link;
       foreach $k (@link) {
-        print OUT "$non_KO_link{$k}\t";
+        print OUT "$link{$k}\t";
       }
     } 
     my @member_KOs = @{ $cluster_member_KOs{$j} };
