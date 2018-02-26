@@ -183,7 +183,7 @@ while($ll=<TMP>){
     elsif ($txt =~ /\[PATH:(ko\d+)\]/) {
       $t_ko = $1;
       $txt =~ s/\s+\[PATH:ko\d+\]//;
-      $txt =~ s/\d+\s+//;
+      $txt =~ s/^\d+\s+//;
       $ko_des{$t_ko} = $txt;
       $level_is_ko{$level} = 1;
     }
@@ -291,7 +291,7 @@ foreach $i (@p) {
     $abs_adj      = float_e6($abs_adj / $no);
 
     my $cov = float_e3( $no/($#member_KOs+1) ) ;
-    if ($level_is_ko{$i} and defined($ko_des{substr($j, 2)}) ) {
+    if ($level_is_ko{$i} ) {
       print OUT substr($j, 2), "\t", $ko_des{substr($j, 2)}, "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\n";
     }
     else {
