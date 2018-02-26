@@ -266,13 +266,13 @@ foreach $i (@p) {
   my $output_ann = "$output-$i";
   open(OUT, "> $output_ann") || die "can not write to $output_ann";
 
-  if    ($i eq "B") { print OUT "#A"; }
-  elsif ($i eq "C") { print OUT "#A\tB"; }
-  elsif ($i eq "D") { print OUT "#A\tB\tC"; }
-  elsif ($i eq "E") { print OUT "#A\tB\tC\tD"; }
+  if    ($i eq "B") { print OUT "#A\t"; }
+  elsif ($i eq "C") { print OUT "#A\tB\t"; }
+  elsif ($i eq "D") { print OUT "#A\tB\tC\t"; }
+  elsif ($i eq "E") { print OUT "#A\tB\tC\tD\t"; }
 
-  if ($level_is_ko{$i}) { print OUT     "\tko\tDescription\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
-  else {                  print OUT             "\tCluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
+  if ($level_is_ko{$i}) { print OUT     "ko\tDescription\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
+  else {                  print OUT             "Cluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
 
   foreach $j (@clusters) {
     if ( $non_KO_link{$j} ) {
