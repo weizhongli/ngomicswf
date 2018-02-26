@@ -148,7 +148,12 @@ while($ll=<TMP>){
   if ($level eq 'A') {
     %current_ABCDE_des = ();
   }
+  elsif ($level eq 'B') { delete( $current_ABCDE_des{'B'}); delete( $current_ABCDE_des{'C'}); delete( $current_ABCDE_des{'D'}); }
+  elsif ($level eq 'C') {                                   delete( $current_ABCDE_des{'C'}); delete( $current_ABCDE_des{'D'}); }
+  elsif ($level eq 'D') {                                                                     delete( $current_ABCDE_des{'D'}); }
+
   my $txt   = substr($ll,1); $txt =~ s/^\s+//;
+  next unless ($txt =~ /\w/);
 
   if ($txt =~ /^K\d+/) { #### this is KO level
     my ($KO, $des) = split(/\s+/, $txt, 2);
