@@ -76,7 +76,7 @@ EOD
         $print_flag = 0 unless ($t_R1[6] eq "=");
         $print_flag = 0 unless ($t_R2[6] eq "=");
       }
-      elsif ($R1_pri_aln and $R2_pri_aln) {
+      elsif ($R1_pri_aln or $R2_pri_aln) {
         $print_flag = 1; #### only one read mapped
       }
       else {
@@ -107,7 +107,7 @@ EOD
         $print_flag = 0 unless ($t_R1[6] eq "=");
         $print_flag = 0 unless ($t_R2[6] eq "=");
       }
-      elsif ($R1_pri_aln and $R2_pri_aln) {
+      elsif ($R1_pri_aln or $R2_pri_aln) {
         $print_flag = 1; #### only one read mapped
       }
       else {
