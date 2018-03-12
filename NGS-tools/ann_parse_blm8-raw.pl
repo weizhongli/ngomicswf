@@ -15,14 +15,15 @@ my $script_dir = $0;
 require "$script_dir/ann_local.pl";
 
 use Getopt::Std;
-getopts("i:a:o:e:d:",\%opts);
+getopts("i:a:o:e:d:c:",\%opts);
 die usage() unless ($opts{i} and $opts{o} and $opts{d});
 
 my $results_dir  = $opts{i};
 my $output       = $opts{o};
 my $e_cutoff     = $opts{e}; $e_cutoff = 0.001 unless (defined($e_cutoff));
 my $ref_faa      = $opts{d};
-my $overlap_cutoff = 0.5;
+my $overlap_cutoff = $opts{c};
+   $overlap_cutoff = 0.5 unless (defined($overlap_cutoff));
 die "blast output results dir $results_dir not found" unless (-e $results_dir);
 my ($i, $j, $k, $ll, $cmd);
 
@@ -98,6 +99,8 @@ EOD
     my $hmm_e    = $lls[9];
     my $seq_b    = $lls[6];
     my $seq_e    = $lls[7];
+    ($hmm_b, $hmm_e) = sort {$a<=>$b} ($hmm_b, $hmm_e); ## sort in case of translated blast
+    ($seq_b, $seq_e) = sort {$a<=>$b} ($seq_b, $seq_e); ## sort in case of translated blast
 
     next unless ($e_value <= $e_cutoff);
 
@@ -127,5 +130,23 @@ sub overlap1 {
   return 0 if ($e2 < $b1);
   return 0 if ($b2 > $e1);
   return ( ($e1<$e2)? $e1:$e2 )-( ($b1>$b2)? $b1:$b2);
+}
+
+
+sub usage {
+<<EOD;
+
+Filter raw blast tab format results and add full description at end of line
+
+$script_name -i blast_output_or_folder_of_blast_output -o output_file -e e.value_cutoff -d reference-fasta-file -c overlap-cutoff
+
+  -i blast_output_or_folder_of_blast_output
+  -o output file name
+  -d reference-fasta-file
+  -e cutoff value for e.value, default 0.001
+  -c cutoff value for overlap, if a hit is overlap (on Query sequence coordinate) with
+     a existing hit with better e.value, this hit is filtered
+     default 0.5
+EOD
 }
 
