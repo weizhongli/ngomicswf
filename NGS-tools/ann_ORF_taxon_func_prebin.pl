@@ -147,6 +147,7 @@ while($ll=<TMP>){
     chop($ll);
     my ($rid, $no1, $no_taxid, $KO, $des) = split(/\t/, substr($ll, 1));
     next unless ($ref_ids{$rid});
+    $des = $KO unless ($des);
 
     $ref_2_ann{$rid} = $des;
     $ref_2_taxids{$rid} = [];
