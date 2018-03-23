@@ -281,14 +281,14 @@ wait
 
 NGS_batch_jobs['blast-kegg-parse'] = {
   'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction'],
-  'CMD_opts'       : ['kegg/keggf_taxon.txt'],
+  'CMD_opts'       : ['kegg/keggf_taxon.txt', 'kegg/keggf.clstr.ann'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 ln -s ../../$INJOBS.1/out.bl $INJOBS.0/blast/out.bl
 
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/kegg/kegg.clstr.ann \\
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/$CMDOPTS.1 \\
   -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0
 
 #$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
