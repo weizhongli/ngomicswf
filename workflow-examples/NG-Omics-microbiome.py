@@ -121,7 +121,7 @@ NGS_batch_jobs['reads-mapping'] = {
 #  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.raw.bam
 
 $ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
-  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl | \\
+  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T $CMDOPTS.0 | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.top.bam
 
 
