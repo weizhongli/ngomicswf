@@ -117,15 +117,17 @@ NGS_batch_jobs['reads-mapping'] = {
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 
-$ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -a $ENV.NGS_root/refs/ref-genomes $INJOBS.0/non-host-R1.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/R1-raw.bam
-$ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -a $ENV.NGS_root/refs/ref-genomes $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/R2-raw.bam
-$ENV.NGS_root/NGS-tools/NGS-sam-raw-reduce-to-tophits-2SE.pl -i $SELF/R1-raw.bam -j $SELF/R2-raw.bam -T $CMDOPTS.0 \\
-  -l $SELF/bam-filter-log -p $ENV.NGS_root/apps/bin/samtools -b 1 | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/R12-top.bam
+#$ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
+#  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.raw.bam
 
-$ENV.NGS_root/NGS-tools/NGS-sam-genome-cov.pl -i $SELF/R12-top.bam -o $SELF/R12-genome-cov -b 1 -t $ENV.NGS_root/apps/bin/samtools
-$ENV.NGS_root/NGS-tools/NGS-sam-genome-cov-filter-sam.pl -i $SELF/R12-top.bam -j $SELF/R12-genome-cov -c 0.1 -b 1 -t $ENV.NGS_root/apps/bin/samtools -o $SELF/R12-topf.sam 
-mv $SELF/R12-topf.sam $SELF/R12-top.sam
-$NGS_bin_dir/samtools view -S $SELF/R12-T60-top.sam         -F 0x004 | cut -f 1 | uniq > $SELF/mapped-genome.ids
+$ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
+  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl | \\
+  $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.top.bam
+
+
+# Add additional BAM filtering steps below
+
+# Add taxonomy profiling steps below or start a job job block
 
 '''
 }
