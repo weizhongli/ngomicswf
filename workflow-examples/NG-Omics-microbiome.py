@@ -122,8 +122,8 @@ $ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -a $ENV.NGS_root/refs/ref-gen
 $ENV.NGS_root/NGS-tools/NGS-sam-raw-reduce-to-tophits-2SE.pl -i $SELF/R1-raw.bam -j $SELF/R2-raw.bam -T $CMDOPTS.0 \\
   -l $SELF/bam-filter-log -p $ENV.NGS_root/apps/bin/samtools -b 1 | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/R12-top.bam
 
-$ENV.NGS_root/NGS-tools/NGS-sam-genome-cov.pl -i $SELF/R12-top.bam -o $SELF/R12--genome-cov -b 1 -t $ENV.NGS_root/apps/bin/samtools
-$ENV.NGS_root/NGS-tools/NGS-sam-genome-cov-filter-sam.pl -i $SELF/R12-top.bam -j $SELF/R12--genome-cov -c 0.1 -b 1 -t $ENV.NGS_root/apps/bin/samtools -o $SELF/R12-topf.sam 
+$ENV.NGS_root/NGS-tools/NGS-sam-genome-cov.pl -i $SELF/R12-top.bam -o $SELF/R12-genome-cov -b 1 -t $ENV.NGS_root/apps/bin/samtools
+$ENV.NGS_root/NGS-tools/NGS-sam-genome-cov-filter-sam.pl -i $SELF/R12-top.bam -j $SELF/R12-genome-cov -c 0.1 -b 1 -t $ENV.NGS_root/apps/bin/samtools -o $SELF/R12-topf.sam 
 mv $SELF/R12-topf.sam $SELF/R12-top.sam
 $NGS_bin_dir/samtools view -S $SELF/R12-T60-top.sam         -F 0x004 | cut -f 1 | uniq > $SELF/mapped-genome.ids
 
@@ -289,30 +289,14 @@ ln -s ../../$INJOBS.1/out.bl $INJOBS.0/blast/out.bl
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/kegg/kegg.clstr.ann \\
   -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0
 
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002.keg -o $SELF/ORF-ann-kegg-module
+#$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
+#$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002.keg -o $SELF/ORF-ann-kegg-module
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001-biome.keg -o $SELF/ORF-ann-kegg-pathway
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002-edit.keg -o $SELF/ORF-ann-kegg-module
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01000.keg -o $SELF/ORF-ann-kegg-EC
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko02000.keg -o $SELF/ORF-ann-kegg-transporter
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01504.keg -o $SELF/ORF-ann-kegg-AMR
 '''
 }
 
-NGS_batch_jobs['blastx-viral'] = {
-  'injobs'         : ['assembly'],
-  'CMD_opts'       : ['ref-genomes/ref_viral_prot_95'],
-  'execution'      : 'qsub_1',        # where to execute
-  'cores_per_cmd'  : 8,              # number of threads used by command below
-  'no_parallel'    : 1,               # number of total jobs to run using command below
-  'command'        : '''
-
-$ENV.NGS_root/apps/blast+/bin/blastx -query  $INJOBS.0/assembly/scaffold.fa -out $SELF/viral-bl \\
-  -db $ENV.NGS_root/refs/ref-genomes/ref_viral_prot_95 -evalue 0.001 -num_threads 8 -num_alignments 5 -outfmt 6 -seg yes
-
-$ENV.NGS_root/NGS-tools/ann_blastx_orf_call_format.pl -i $SELF/viral-bl -o $SELF/viral-blnew
-perl -e 'while(<>){ chop($_); $_ =~ s/\s.+$//; print ">$_\\nXXXXXXXXXX\\n"; }' < $SELF/viral-blnew > $SELF/blastx-ORF
-
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $SELF/viral-blnew -r $ENV.NGS_root/refs/ref-genomes/ref_viral_prot_95.clstr.ann \\
-  -a $SELF/blastx-ORF -o $SELF/ORF -t $ENV.NGS_root/refs/ref-genomes/ref_viral_prot_taxon.txt
-'''
-}
 
