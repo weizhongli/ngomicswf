@@ -248,17 +248,43 @@ $ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $SELF/out $SELF/orf-split/split 64
 '''
 }
 
+NGS_batch_jobs['orf-split'] = {
+  'injobs'         : ['ORF-prediction'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+mkdir $SELF/orf-split
+$ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $INJOBS.0/ORF.faa               $SELF/orf-split/split        256
+'''
+}
 
-#NGS_batch_jobs['orf-split'] = {
-#  'injobs'         : ['ORF-prediction'],
-#  'execution'      : 'qsub_1',        # where to execute
-#  'cores_per_cmd'  : 16,              # number of threads used by command below
-#  'no_parallel'    : 1,               # number of total jobs to run using command below
-#  'command'        : '''
-#mkdir $SELF/orf-split
-#$ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $INJOBS.0/ORF.faa               $SELF/orf-split/split        256
-#'''
-#}
+NGS_batch_jobs['pfam'] = {
+  'injobs'         : ['orf-split'],
+  'CMD_opts'       : ['pfam/Pfam-A.hmm'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 4,              # number of threads used by command below
+  'no_parallel'    : 4,               # number of total jobs to run using command below
+  'command'        : '''
+for i in `seq 1 4`
+  do $ENV.NGS_root/NGS-tools/ann_batch_run_dir.pl --INDIR1=$INJOBS.0/orf-split --OUTDIR1=$SELF/pfam --OUTDIR2=$SELF/pfam.2 --OUTDIR3=$SELF/pfam.3 \\
+    --CPU=$SELF/WF.cpu $ENV.NGS_root/apps/hmmer/binaries/hmmscan -E 0.001 -o {OUTDIR1} --notextw --noali --cpu 1 --tblout {OUTDIR2} \\
+    --domtblout {OUTDIR3} $ENV.NGS_root/refs/$CMDOPTS.0 {INDIR1} &
+done
+wait
+
+'''
+}
+
+NGS_batch_jobs['pfam-parse'] = {
+  'injobs'         : ['pfam', 'ORF-prediction'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 2,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+$ENV.NGS_root/NGS-tools/ann_parse_hmm.pl -i $INJOBS.0/pfam.3 -o $SELF/pfam-ann.txt -a $INJOBS.1/ORF-cov
+'''
+}
 
 NGS_batch_jobs['blast-kegg'] = {
   'injobs'         : ['cd-hit-kegg'],
