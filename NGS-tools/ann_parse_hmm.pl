@@ -20,25 +20,28 @@ die usage() unless ($opts{i} and $opts{o});
 
 my $results_dir  = $opts{i};
 my $parse_output = $opts{o};
-my $orf_abs      = $opts{a}; #### abundance file for ORFs
+my $ORF_depth    = $opts{a}; #### ORF depth
 my $e_cutoff     = $opts{e}; $e_cutoff = 0.001 unless (defined($e_cutoff));
 my $overlap_cutoff = 0.5;
 die "hmmer3 output results dir $results_dir not found" unless (-e $results_dir);
 my ($i, $j, $k, $ll, $cmd);
 
-my %orf_abs = ();
-my $abs_flag = 0;
-if ($orf_abs) {
-  open(TMP, $orf_abs) || die "Can not open $orf_abs";
+
+my %ORF_depth = ();
+my $ORF_depth_flag = 0;
+if (defined($ORF_depth) and (-e $ORF_depth)) {
+  open(TMP, $ORF_depth) || die "can not open $ORF_depth";
   while($ll=<TMP>){
     next if ($ll =~ /^#/);
     chop($ll);
-    my @lls = split(/\t/,$ll);     #### ID	length	cov	relative abundance
-    $orf_abs{$lls[0]} = $lls[2]; 
+    #### ID      depth
+    my @lls = split(/\t/,$ll);
+    $ORF_depth{ $lls[0] } = $lls[1];
   }
   close(TMP);
-  $abs_flag = 1;
+  $ORF_depth_flag = 1;
 }
+
 
 my $hmm_acc_2_name = ();
 my $hmm_acc_2_des = ();
@@ -124,7 +127,7 @@ EOD
 
     next if ($overlap_with_before);
     my $cov1 = $hmm_aln_ln / $hmm_len;
-    my $weight = ($abs_flag and defined($orf_abs{$seq_id})) ?  $orf_abs{$seq_id} : 1;
+    my $weight = ($ORF_depth_flag and defined($ORF_depth{$seq_id})) ?  $ORF_depth{$seq_id} : 1;
     $hmm_orf_adjusted{$hmm_acc} +=         $weight;
     $hmm_cov_adjusted{$hmm_acc} += $cov1 * $weight;
     push(@last_e, $seq_e);
