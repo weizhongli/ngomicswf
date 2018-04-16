@@ -88,7 +88,7 @@ EOD
     next unless ($FLAG & 0x0001 );
     next unless ($FLAG & 0x0002 );
 
-    if    ($id    ne $last_id) {
+    if    (($id    ne $last_id) and $last_id ) {
       #### for this read pair, if both R1 and R2 hit a tid (t1) and only R1 or R2 hit another tid (t2), skip t2 
       my @t = sort {$b <=> $a} values %hit_tids;
       my $m = $t[0]; #### the tid with most 
@@ -124,6 +124,9 @@ EOD
       %hit_tids = ();
     }
 
+if ($sam_file ne "-") { close(TMP); }
+
+#####
 if (not defined($num_total_reads)) {
   $num_total_reads = $num_mapped_reads;
   $num_unmapped_reads = 0; 
@@ -207,34 +210,36 @@ foreach $tid (keys %tid_reads_count) {
 }
 
 
-
-my @ranks = qw/phylum class order family genus species toprank/;
-foreach $rank (@ranks) {
-
 #taxid	rank	name	superkingdom	superkingdom_ti	kingdom	kingdom_ti	phylum	phylum_ti	class	class_ti	order	order_ti	family	family_ti	genus	genus_ti	species	species_ti	toprank	toprank_ti
 #1000373	toprank	Rosellinia necatrix quadrivirus 1	Viruses	10239	\N	\N	dsRNA viruses	35325	\N	\N	\N	\N	Quadriviridae	1299296	Quadrivirus	1299297	Rosellinia necatrix quadrivirus 1	1000373	Rosellinia necatrix quadrivirus 1	1000373
-  my %rank_col = qw/phylum 7 class 9 order 11 family 13 genus 15 species 17 toprank 19/;
+
+my @ranks = qw/phylum class order family genus species toprank/;
+my %rank_col = qw/phylum 7 class 9 order 11 family 13 genus 15 species 17 toprank 19/;
+foreach $rank (@ranks) {
+
   my %rank_ti_info = ();
   my %rank_ti_abs = ();
   my %rank_ti_cov = ();
+  my $rank_col = $rank_col{$rank};
+
   foreach $tid (keys %tid_reads_count) {
     my $abs = $tid_relative_abs{$tid};
     next unless ($abs >= $cutoff);
     my @tid_info = @{ $taxon_info{$tid} };
     my $abs_adj = $abs / $total_adj_abs;
 
-    my $rank_tid = $tid_info[$rank_col{$rank} + 1];
+    my $rank_tid = $tid_info[ $rank_col + 1];
     if ($rank_tid =~ /\d+/) { #### this is good
       ;
     }
     else { #### missing tid at this rank
-      $j = $rank_col{$rank}; 
+      $j = $rank_col + 2; 
       while(1) {
-        $j +=2; 
         if ($tid_info[$j+1] =~ /\d+/) {
           $rank_tid = $tid_info[$j+1];
           last;
         }
+        $j +=2; 
       }
     }
     if (not defined($rank_ti_info{$rank_tid})) {
