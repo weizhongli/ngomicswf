@@ -56,7 +56,7 @@ my %tid_reads_count = ();
 my $last_id = "";
 my %hit_tids = ();
 my $num_mapped_reads = 0;
-while($ll=<>){
+while($ll=<$fh>){
   if ($ll =~ /^\@/) { #### headers
     next;
   }
