@@ -250,7 +250,7 @@ foreach $rank (@ranks) {
       $rank_ti_info{$rank_tid} = [ @tid_info[@j] ];
     }
     $rank_ti_abs{$rank_tid} += $abs_adj;
-    $rank_ti_cov{$rank_tid} += $tid__depth_of_cov{$tid};
+    $rank_ti_cov{$rank_tid} += $tid_depth_of_cov{$tid};
   }
   my @output_rank_tids = keys %rank_ti_abs;
      @output_rank_tids = sort { $rank_ti_abs{$b} <=> $rank_ti_abs{$a} } @output_rank_tids;
