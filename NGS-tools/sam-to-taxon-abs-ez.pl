@@ -202,7 +202,7 @@ foreach $tid (keys %tid_reads_count) {
 
   my $abs = $tid_depth_of_cov{$tid} / $superkingdom_total_cov{$superkingdom_ti} * 
            ( $superkingdom_reads{$superkingdom_ti} / $num_mapped_reads);
-  $abs  = int($abs * 10000000)/10000000;
+  $abs  = int($abs * 100000000)/100000000;
   if ($abs >= $cutoff) {
     $total_adj_abs +=$abs;
   }
