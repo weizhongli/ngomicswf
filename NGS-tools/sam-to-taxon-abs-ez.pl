@@ -151,7 +151,7 @@ while($ll=<TMP>) {
   $ll =~ s/\\N/NA/g;
   my ($tid, $rank, @lls) = split(/\t/, $ll);
   next unless ($rank eq "toprank");
-  $taxon_info{$tid} = [@lls];
+  $taxon_info{$tid} = [$tid, $rank, @lls];
 }
 close(TMP);
 
