@@ -11,7 +11,7 @@
 ## input BAM / SAM must already be filtered to remove non-top hits 
 
 use Getopt::Std;
-getopts("i:o:a:t:r:N:c:",\%opts);
+getopts("i:o:a:t:r:N:c:P:",\%opts);
 die usage() unless ($opts{o} and $opts{a} and $opts{t});
 
 
@@ -21,7 +21,7 @@ my $bwa_db_ann  = $opts{a}; ### bwa db .ann file
 my $output      = $opts{o};
 my $taxon_file  = $opts{t}; #### taxon file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl
 my $read_length = $opts{r}; #### read length
-   $read_length = 150 unless ($read_length);
+   $read_length = 150*2 unless ($read_length);
 my $cutoff      = $opts{c}; #### relative abundance cutoff
    $cutoff      = 1e-9 unless ($cutoff);
 my $num_total_reads = $opts{N};
@@ -247,7 +247,7 @@ foreach $rank (@ranks) {
       for ($j=3; $j<=$rank_col{$rank}; $j+=2) {
          push(@j, $j);
       }
-      $rank_ti_info{$rank_tid} = @tid_info[@j];
+      $rank_ti_info{$rank_tid} = [ @tid_info[@j] ];
     }
     $rank_ti_abs{$rank_tid} += $abs_adj;
     $rank_ti_cov{$rank_tid} += $tid__depth_of_cov{$tid};

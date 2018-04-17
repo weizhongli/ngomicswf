@@ -124,10 +124,13 @@ $ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-gen
   $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T $CMDOPTS.0 | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.top.bam
 
+# count total number of input reads
+NUM_reads=$(grep -c "^>" $INJOBS.0/non-host-R1.fa)
+
 # Add additional BAM filtering steps below
 $ENV.NGS_root/apps/bin/samtools view $SELF/ref_genome.top.bam | \\
   $ENV.NGS_root/NGS-tools/sam-to-taxon-abs-ez.pl -a $ENV.NGS_root/refs/ref-genomes/ref_genome_full.ann -t $ENV.NGS_root/refs/ref-genomes/ref_genome_taxon.txt \\
-  -o $SELF/taxon -c 1e-6
+  -o $SELF/taxon -c 1e-6 -N $NUM_reads
 
 '''
 }
