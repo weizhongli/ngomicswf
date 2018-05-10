@@ -77,7 +77,7 @@ rm -f $SELF/R1.fq $SELF/R2.fq $SELF/R1-s.fq $SELF/R2-s.fq
 ##   skip:     do not run, for non-host related samples
 NGS_batch_jobs['remove-host'] = {
   'injobs'         : ['qc'],          # start with high quality reads
-  'CMD_opts'       : ['bwa'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
+  'CMD_opts'       : ['bwa','host/GRCh38.fa'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -85,13 +85,11 @@ NGS_batch_jobs['remove-host'] = {
 
 if [ "$CMDOPTS.0" = "bwa" ]
 then
-  $ENV.NGS_root/apps/bin/bwa mem -t 16 -a $ENV.NGS_root/refs/host $INJOBS.0/R1.fa | $ENV.NGS_root/NGS-tools/NGS-sam-raw-reduce-to-tophits.pl > $SELF/host-R1-top.sam &
-  $ENV.NGS_root/apps/bin/bwa mem -t 16 -a $ENV.NGS_root/refs/host $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/NGS-sam-raw-reduce-to-tophits.pl > $SELF/host-R2-top.sam &
-  wait
-  cat $SELF/host-R1-top.sam | $ENV.NGS_root/apps/bin/samtools view -S - -F 0x004 | cut -f 1 | uniq > $SELF/host-hit-R1.ids
-  cat $SELF/host-R2-top.sam | $ENV.NGS_root/apps/bin/samtools view -S - -F 0x004 | cut -f 1 | uniq > $SELF/host-hit-R2.ids
-  cat $SELF/host-hit-R1.ids $SELF/host-hit-R2.ids | sort | uniq > $SELF/host-hit.ids
-  rm -f $SELF/host-hit-R1.ids $SELF/host-hit-R2.ids
+  $ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.1 \\
+  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl \\
+  $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/host.top.bam
+
+  cat $SELF/host.top.bam | $ENV.NGS_root/apps/bin/samtools view -S - -F 0x004 | cut -f 1 > $SELF/host-hit.ids
   $ENV.NGS_root/NGS-tools/NGS-fasta-fetch-exclude-ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
   $ENV.NGS_root/NGS-tools/NGS-fasta-fetch-exclude-ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
   
