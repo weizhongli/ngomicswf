@@ -78,6 +78,7 @@ rm -f $SELF/R1.fq $SELF/R2.fq $SELF/R1-s.fq $SELF/R2-s.fq
 NGS_batch_jobs['remove-host'] = {
   'injobs'         : ['qc'],          # start with high quality reads
   'CMD_opts'       : ['bwa','host/GRCh38.fa'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
+  'non_zero_files' : ['non-host-R1.fa','non-host-R2.fa'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -89,7 +90,7 @@ then
   $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/host.top.bam
 
-  cat $SELF/host.top.bam | $ENV.NGS_root/apps/bin/samtools view -S - -F 0x004 | cut -f 1 > $SELF/host-hit.ids
+  $ENV.NGS_root/apps/bin/samtools view $SELF/host.top.bam -F 0x004 | cut -f 1 > $SELF/host-hit.ids
   $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
   $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
   
@@ -120,6 +121,7 @@ fi
 NGS_batch_jobs['reads-mapping'] = {
   'injobs'         : ['remove-host'],
   'CMD_opts'       : ['75'],          # significant score cutoff
+  'non_zero_files' : ['ref_genome.top.bam'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
