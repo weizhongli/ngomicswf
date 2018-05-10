@@ -86,12 +86,12 @@ NGS_batch_jobs['remove-host'] = {
 if [ "$CMDOPTS.0" = "bwa" ]
 then
   $ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.1 \\
-  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl \\
+  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/host.top.bam
 
   cat $SELF/host.top.bam | $ENV.NGS_root/apps/bin/samtools view -S - -F 0x004 | cut -f 1 > $SELF/host-hit.ids
-  $ENV.NGS_root/NGS-tools/NGS-fasta-fetch-exclude-ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
-  $ENV.NGS_root/NGS-tools/NGS-fasta-fetch-exclude-ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
+  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
+  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
   
 elif [ "$CMDOPTS.0" = "bowtie2" ]
 then
@@ -101,8 +101,8 @@ then
   cut -f 1 $SELF/host-hit-1 > $SELF/host-hit-R1.ids
   cut -f 1 $SELF/host-hit-2 > $SELF/host-hit-R2.ids
   rm -f $SELF/host-hit-R1.ids $SELF/host-hit-R2.ids
-  $ENV.NGS_root/NGS-tools/NGS-fasta-fetch-exclude-ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
-  $ENV.NGS_root/NGS-tools/NGS-fasta-fetch-exclude-ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
+  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
+  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
 
 elif [ "$CMDOPTS.0" = "skip" ]
 then
