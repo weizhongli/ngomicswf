@@ -332,23 +332,25 @@ wait
 
 NGS_batch_jobs['blast-kegg-parse'] = {
   'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction','assembly-binning'],
-  'CMD_opts'       : ['kegg/keggf_taxon.txt', 'kegg/keggf.clstr.ann'],
+  'CMD_opts'       : ['kegg/keggf_taxon.txt', 'ref-genomes/ref_genome_taxon.txt', 'kegg/keggf.clstr.ann'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 ln -s ../../$INJOBS.1/out.bl $INJOBS.0/blast/out.bl
 
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/$CMDOPTS.1 \\
-  -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_prebin.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/$CMDOPTS.2 \\
+  -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0 -s $INJOBS.2/assembly-bin -x $ENV.NGS_root/refs/$CMDOPTS.1 -p $SELF/scaffold-ann.txt
 
 #$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
 #$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002.keg -o $SELF/ORF-ann-kegg-module
+
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001-biome.keg -o $SELF/ORF-ann-kegg-pathway
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002-edit.keg -o $SELF/ORF-ann-kegg-module
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01000.keg -o $SELF/ORF-ann-kegg-EC
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko02000.keg -o $SELF/ORF-ann-kegg-transporter
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01504.keg -o $SELF/ORF-ann-kegg-AMR
+
 '''
 }
 
