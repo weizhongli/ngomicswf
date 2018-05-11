@@ -199,42 +199,12 @@ perl -e 'while(<>){ if ($_ =~ /^>(\S+)/) { $id=$1;  if ($_ =~ /_cov_([\d\.]+)/) 
 '''
 }
 
-
-NGS_batch_jobs['assembly-binning'] = {
-  'injobs'         : ['assembly','remove-host','reads-mapping'],
-  'CMD_opts'       : ['75','ref-genomes/ref_genome_taxon.txt'],     # alignment cutoff score for both R1 and R2
-  'non_zero_files' : ['assembly-bin'],
-  'execution'      : 'qsub_1',        # where to execute
-  'cores_per_cmd'  : 16,              # number of threads used by command below
-  'no_parallel'    : 1,               # number of total jobs to run using command below
-  'command'        : '''
-
-$ENV.NGS_root/apps/bin/bwa index -a bwtsw -p $SELF/assembly $INJOBS.0/assembly/scaffold.fa
-
-$ENV.NGS_root/apps/bin/bwa mem -t 16 $SELF/assembly $INJOBS.1/non-host-R1.fa $INJOBS.1/non-host-R2.fa | \\
-  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/assembly-mapping.sam
-$ENV.NGS_root/NGS-tools/sam-to-seq-depth-cov.pl -s $INJOBS.0/assembly/scaffold.fa -o $SELF/scaffold-cov < $SELF/assembly-mapping.sam
-
-$ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome.top.bam | \\
-  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/ref-mapping.sam 
-
-$ENV.NGS_root/NGS-tools/assembly-binning-taxon.pl -i $SELF/assembly-mapping.sam -j  $SELF/ref-mapping.sam -o $SELF/assembly-bin \\
-  -s $INJOBS.0/assembly/scaffold.fa -c 0.5 -n 10 -a taxid -t $ENV.NGS_root/refs/$CMDOPTS.1
-
-rm -f $SELF/assembly.amb  $SELF/assembly.ann $SELF/assembly.bwt $SELF/assembly.pac $SELF/assembly.sa
-rm -f $SELF/assembly-mapping.sam
-rm -f $SELF/ref-mapping.sam
-
-'''
-}
-
-
 NGS_batch_jobs['ORF-prediction'] = {
   'injobs'         : ['assembly'],
   'CMD_opts'       : ['prodigal', '20'],    # can be metagene or prodigal 
   'non_zero_files' : ['ORF.faa'],
   'execution'      : 'qsub_1',        # where to execute
-  'cores_per_cmd'  : 1,               # number of threads used by command below
+  'cores_per_cmd'  : 4,               # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 if [ "$CMDOPTS.0" = "metagene" ]
@@ -256,6 +226,38 @@ mv  $SELF/ORF-new.faa $SELF/ORF.faa
 $ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $SELF/ORF.faa -d $INJOBS.0/assembly/scaffold-cov -o $SELF/ORF-cov
 '''
 }
+
+
+NGS_batch_jobs['assembly-binning'] = {
+  'injobs'         : ['assembly','remove-host','reads-mapping','ORF-prediction'],
+  'CMD_opts'       : ['75','ref-genomes/ref_genome_taxon.txt'],     # alignment cutoff score for both R1 and R2
+  'non_zero_files' : ['assembly-bin'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+$ENV.NGS_root/apps/bin/bwa index -a bwtsw -p $SELF/assembly $INJOBS.0/assembly/scaffold.fa
+
+$ENV.NGS_root/apps/bin/bwa mem -t 16 $SELF/assembly $INJOBS.1/non-host-R1.fa $INJOBS.1/non-host-R2.fa | \\
+  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/assembly-mapping.sam
+$ENV.NGS_root/NGS-tools/sam-to-seq-depth-cov.pl -s $INJOBS.0/assembly/scaffold.fa -o $SELF/scaffold-cov < $SELF/assembly-mapping.sam
+
+$ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome.top.bam | \\
+  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/ref-mapping.sam 
+
+$ENV.NGS_root/NGS-tools/assembly-binning-taxon.pl -i $SELF/assembly-mapping.sam -j  $SELF/ref-mapping.sam -o $SELF/assembly-bin \\
+  -s $INJOBS.0/assembly/scaffold.fa -c 0.5 -n 10 -a taxid -t $ENV.NGS_root/refs/$CMDOPTS.1
+
+$ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $INJOBS.3/ORF.faa -d $SELF/scaffold-cov -o $SELF/ORF-cov
+
+rm -f $SELF/assembly.amb  $SELF/assembly.ann $SELF/assembly.bwt $SELF/assembly.pac $SELF/assembly.sa
+rm -f $SELF/assembly-mapping.sam
+rm -f $SELF/ref-mapping.sam
+
+'''
+}
+
 
 NGS_batch_jobs['cd-hit-kegg'] = {
   'injobs'         : ['ORF-prediction'],
@@ -329,7 +331,7 @@ wait
 }
 
 NGS_batch_jobs['blast-kegg-parse'] = {
-  'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction'],
+  'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction','assembly-binning'],
   'CMD_opts'       : ['kegg/keggf_taxon.txt', 'kegg/keggf.clstr.ann'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
@@ -340,13 +342,13 @@ ln -s ../../$INJOBS.1/out.bl $INJOBS.0/blast/out.bl
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/$CMDOPTS.1 \\
   -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0
 
-#$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
-#$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002.keg -o $SELF/ORF-ann-kegg-module
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001-biome.keg -o $SELF/ORF-ann-kegg-pathway
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002-edit.keg -o $SELF/ORF-ann-kegg-module
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01000.keg -o $SELF/ORF-ann-kegg-EC
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko02000.keg -o $SELF/ORF-ann-kegg-transporter
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.2/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01504.keg -o $SELF/ORF-ann-kegg-AMR
+#$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
+#$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002.keg -o $SELF/ORF-ann-kegg-module
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001-biome.keg -o $SELF/ORF-ann-kegg-pathway
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002-edit.keg -o $SELF/ORF-ann-kegg-module
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01000.keg -o $SELF/ORF-ann-kegg-EC
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko02000.keg -o $SELF/ORF-ann-kegg-transporter
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01504.keg -o $SELF/ORF-ann-kegg-AMR
 '''
 }
 
