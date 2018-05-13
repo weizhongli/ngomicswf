@@ -180,6 +180,10 @@ while($ll=<TMP>){
   next if ($tid eq "Host");
   next if ($tid eq "contaminant");
   $scaffold_2_len{$sid} = $lls[-1];
+  if (not defined($scaffold_member_orfs{$sid})) {
+    $scaffold_member_orfs{$sid} = []; 
+    $scaffold_orf_count{$sid} = 0;
+  }
   #next unless ($scaffold_member_orfs{$sid});
   if ($tid =~ /\d+/) {
     $scaffold_2_taxid{$sid} = $tid;
