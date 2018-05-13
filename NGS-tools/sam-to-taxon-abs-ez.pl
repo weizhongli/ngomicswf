@@ -260,7 +260,7 @@ foreach $rank (@ranks) {
   print OUT "#tid\tsuperkingdom\tkingdom";
   foreach $i (@ranks) {
     print OUT "\t$i";
-    last if ($i == $rank);
+    last if ($i eq $rank);
   }
   print OUT "\trelative_abundance\tdepth_coverage\n";
   foreach $rank_tid (@output_rank_tids) {
