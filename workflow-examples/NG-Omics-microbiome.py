@@ -345,11 +345,11 @@ $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_prebin.pl -i $INJOBS.0/blast -r $ENV.
 #$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001.keg -o $SELF/ORF-ann-kegg-pathway
 #$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002.keg -o $SELF/ORF-ann-kegg-module
 
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001-biome.keg -o $SELF/ORF-ann-kegg-pathway
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002-edit.keg -o $SELF/ORF-ann-kegg-module
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01000.keg -o $SELF/ORF-ann-kegg-EC
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko02000.keg -o $SELF/ORF-ann-kegg-transporter
-$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01504.keg -o $SELF/ORF-ann-kegg-AMR
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001-biome.keg -o $SELF/ORF-ann-kegg-pathway -r $ENV.NGS_root/refs/kegg/ko00002-M00178.keg
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002-edit.keg -o $SELF/ORF-ann-kegg-module -r $ENV.NGS_root/refs/kegg/ko00002-M00178.keg
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01000.keg -o $SELF/ORF-ann-kegg-EC -r $ENV.NGS_root/refs/kegg/ko00002-M00178.keg
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko02000.keg -o $SELF/ORF-ann-kegg-transporter -r $ENV.NGS_root/refs/kegg/ko00002-M00178.keg
+$ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko01504.keg -o $SELF/ORF-ann-kegg-AMR -r $ENV.NGS_root/refs/kegg/ko00002-M00178.keg
 
 '''
 }
