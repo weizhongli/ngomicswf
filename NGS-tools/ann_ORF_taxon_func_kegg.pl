@@ -241,18 +241,17 @@ while($ll=<TMP>) {
      $fr = 1.0 unless (($fr =~ /^\d/) and ($fr > 0.0));
   my $KO = $lls[11]; #### if hit KO
   next unless ($KO =~ /^K\d+/);
-  if ($single_copy_KOs{$KO}) {
-    $sum_ref_abs += $fr;
-    $sum_ref_abs_adj += $fr*$depth;
-  }
-
-  next unless ( $KO_des{$KO} ); #### unless this KO is in scope
 
   my $ORF = $lls[5];
   my $depth = 1;
   if ($ORF_depth_flag and $ORF_depth{$ORF}) {
     $depth =  $ORF_depth{$ORF};
   }
+  if ($single_copy_KOs{$KO}) {
+    $sum_ref_abs += $fr;
+    $sum_ref_abs_adj += $fr*$depth;
+  }
+  next unless ( $KO_des{$KO} ); #### unless this KO is in scope
 
   $KO_abs{$KO} += $fr;
   $KO_abs_adj{$KO} += $fr * $depth;
