@@ -20,14 +20,14 @@ require "$script_dir/ann_local.pl";
 # these .keg file are from KEGG database /kegg/kegg-brite/ko/
 
 use Getopt::Std;
-getopts("i:k:a:o:e:d:s:t:",\%opts);
+getopts("i:k:a:o:e:d:s:t:r:",\%opts);
 die usage() unless ($opts{i} and $opts{k} and $opts{o});
 
 my $ORF_ann_file = $opts{i}; #### blast alignment file in m8 format
 my $keg_file     = $opts{k}; #### e.g. ko00001.keg  ko00002.keg  ko01000.keg  ko02000.keg
 my $output       = $opts{o}; #### output prefix kegg abundance file
 my $ORF_depth    = $opts{d}; #### ORF depth
-
+my $ref_KOs      = $opts{r}; #### single-copy house keeping gene
 
 my ($i, $j, $k, $ll, $cmd);
 
@@ -45,6 +45,19 @@ if (defined($ORF_depth) and (-e $ORF_depth)) {
   }
   close(TMP);
   $ORF_depth_flag = 1;
+}
+
+my $single_copy_ref_flag = 0;
+my %single_copy_KOs = ();
+if (defined($ref_KOs) and (-e $ref_KOs)) {
+  open(TMP, $ref_KOs) || die "can not open $ref_KOs";
+  while($ll=<TMP>){ 
+    if ($ll =~ /^\w\s+(K\d+)\s/) {
+      $single_copy_KOs{$1} = 1;
+    }
+  }
+  close(TMP);
+  $single_copy_ref_flag = scalar keys %single_copy_KOs;
 }
 
 
@@ -216,6 +229,8 @@ my %KO_abs = ();
 my %KO_abs_adj = ();
 my $sum_abs = 0;
 my $sum_abs_adj = 0;
+my $sum_ref_abs = 0;
+my $sum_ref_abs_adj = 0;
 open(TMP, $ORF_ann_file) || die "can not open $ORF_ann_file";
 #Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFamily\tDescription
 while($ll=<TMP>) {
@@ -238,12 +253,28 @@ while($ll=<TMP>) {
   $KO_abs_adj{$KO} += $fr * $depth;
   $sum_abs += $fr;
   $sum_abs_adj += $fr*$depth;
+
+  if ($single_copy_KOs{$KO}) {
+    $sum_ref_abs += $fr;
+    $sum_ref_abs_adj += $fr*$depth;
+  }
 } 
 close(TMP);
 
+
+if ($single_copy_ref_flag) {
+  $sum_ref_abs /= $single_copy_ref_flag;
+  $sum_ref_abs_adj /= $single_copy_ref_flag;
+}
+else {
+  $sum_ref_abs = 1;
+  $sum_ref_abs_adj = 1;
+}
+
+
 #### output KO
 open(OUT, "> $output") || die "can not write to $output";
-print OUT "#KO\tDepth\tDepth_adj\tAbundance\tAbundance_adj\tDescription\n";
+print OUT "#KO\tDepth\tDepth_adj\tAbundance\tAbundance_adj\tR.depth\tR.depth_adj\tDescription\n";
 my @found_KOs = sort keys %KO_abs;
 foreach $KO (@found_KOs) {
   next unless ( $KO_des{$KO} ); #### unless this KO is in scope
@@ -251,7 +282,10 @@ foreach $KO (@found_KOs) {
   my $abs_adj   = $KO_abs_adj{$KO};
   my $r_abs     = float_e6( $abs    /$sum_abs );
   my $r_abs_adj = float_e6( $abs_adj/$sum_abs_adj );
-  print OUT "$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t$KO_des{$KO}\n";
+  my $abs_2     = float_e3( $abs    /$sum_ref_abs );
+  my $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+
+  print OUT "$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t$abs_2\t$abs_adj_2\t$KO_des{$KO}\n";
 }
 close(OUT);
 my $g_sum_abs = $sum_abs;
@@ -271,8 +305,8 @@ foreach $i (@p) {
   elsif ($i eq "D") { print OUT "#A\tB\tC\t"; }
   elsif ($i eq "E") { print OUT "#A\tB\tC\tD\t"; }
 
-  if ($level_is_ko{$i}) { print OUT     "ko\tDescription\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
-  else {                  print OUT             "Cluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\n"; }
+  if ($level_is_ko{$i}) { print OUT     "ko\tDescription\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\tR.depth\tR.depth_adj\n"; }
+  else {                  print OUT             "Cluster\tMember_KOs\tFound_KOs\tCoverage\tDepth\tDepth_adj\tR.depth\tR.depth_adj\n"; }
 
   foreach $j (@clusters) {
     if ( $non_KO_link{$j} ) {
@@ -287,18 +321,26 @@ foreach $i (@p) {
     my $abs = 0;
     my $abs_adj = 0;
     my $no = 0;
+    my $abs_2 = 0;
+    my $abs_adj_2 = 0;
     foreach $KO (@member_KOs) {
       $no ++                       if ($KO_abs{$KO});
       $abs     += $KO_abs{$KO}     if ($KO_abs{$KO});
       $abs_adj += $KO_abs_adj{$KO} if ($KO_abs_adj{$KO});
     }
+    if ($no) {
+      $abs /= $no;
+      $abs_adj /= $no;
+      $abs_2     = float_e3( $abs    /$sum_ref_abs );
+      $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+    }
 
     my $cov = float_e3( $no/($#member_KOs+1) ) ;
     if ($level_is_ko{$i} ) {
-      print OUT substr($j, 2), "\t", $ko_des{substr($j, 2)}, "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\n";
+      print OUT substr($j, 2), "\t", $ko_des{substr($j, 2)}, "\t", $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t$abs_2\t$abs_adj_2\n";
     }
     else {
-      print OUT substr($j, 2), "\t",                               $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\n";
+      print OUT substr($j, 2), "\t",                               $#member_KOs+1, "\t$no\t$cov\t$abs\t$abs_adj\t$abs_2\t$abs_adj_2\n";
     }
   }
   close(OUT);
@@ -311,7 +353,7 @@ foreach $j (@g_levels) {
   print OUT "\t$j";
   print OUT "\tko" if ($level_is_ko{$j});
 }
-print OUT "\tKO\tDescription\tDepth\tDepth_adj\tAbundance\tAbundance_adj\n";
+print OUT "\tKO\tDescription\tDepth\tDepth_adj\tAbundance\tAbundance_adj\tR.depth\tR.depth_adj\n";
 
 $i00 = 1000001;
 for $i (@full_KO_link) {
@@ -328,14 +370,16 @@ for $i (@full_KO_link) {
     }
   }
   print OUT "\t$KO\t$KO_des{$KO}";
-  my ($abs, $abs_adj, $r_abs, $r_abs_adj) = qw/0 0 0 0/;
+  my ($abs, $abs_adj, $r_abs, $r_abs_adj, $abs_2, $abs_adj_2) = qw/0 0 0 0 0 0/;
   if (defined ($KO_abs{$KO})) {
     $abs       = $KO_abs{$KO};
     $abs_adj   = $KO_abs_adj{$KO};
     $r_abs     = float_e6( $abs    /$g_sum_abs );
     $r_abs_adj = float_e6( $abs_adj/$g_sum_abs_adj );
+    $abs_2     = float_e3( $abs    /$sum_ref_abs );
+    $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
   }
-  print OUT "\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\n";
+  print OUT "\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t$abs_2\t$abs_adj_2\n";
 }
 close(OUT);
 
@@ -358,5 +402,9 @@ $script_name -i ORF_annotation_file -k .keg_file -o output
     -k .keg file, e.g. ko00001.keg  ko00002.keg  ko01000.keg  ko02000.keg
     -o output prefix,
     -d ORF depth file
+    -r .keg file, contains a list of KOs of single copy house-keeping gene 
+       as reference to calculate relative abundance. 
+       e.g. there are 55 KOs M00178  Ribosome, bacteria [PATH:map03010] [BR:ko03011]
+
 EOD
 }
