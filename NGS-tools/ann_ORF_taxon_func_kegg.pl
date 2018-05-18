@@ -328,9 +328,9 @@ foreach $i (@p) {
       $abs     += $KO_abs{$KO}     if ($KO_abs{$KO});
       $abs_adj += $KO_abs_adj{$KO} if ($KO_abs_adj{$KO});
     }
-    if ($no) {
-      $abs /= $no;
-      $abs_adj /= $no;
+    if ( @member_KOs ) {
+      $abs /= $#member_KOs+1;
+      $abs_adj /= $#member_KOs+1;
       $abs_2     = float_e3( $abs    /$sum_ref_abs );
       $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
     }
