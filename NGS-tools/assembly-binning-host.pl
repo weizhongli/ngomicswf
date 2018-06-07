@@ -39,12 +39,8 @@ my $seq_id;
 while($ll=<TMP>){
   chop($ll);
   my @lls = split(/\t/, $ll);
-  if (($lls[1] =~ /\d+/) or ($lls[3] =~ /\d+/)) { #### valid taxid
-    print $fh "$ll\n";
-    next;
-  }
-  elsif ( $lls[1] =~ /contaminant/i ) {
-    print $fh "$ll\n";
+  if (($lls[1] =~ /\d+/) or ($lls[3] =~ /\d+/) or ($lls[1] =~ /contaminant/i) ) { #### valid taxid or contaminant
+#    print $fh "$ll\n";
     next;
   }
   push(@assembly_ids, $lls[0]);
@@ -80,7 +76,6 @@ while($ll=<TMP>){
 close(TMP);
 
 
-
 open(TMP, $sam_reference) || die "can not open $sam_reference";
 my %read_from_host = ();
 while($ll=<TMP>){
@@ -108,34 +103,36 @@ while($ll=<TMP>){
 close(TMP);
 
 
-foreach $i (@assembly_ids) {
-  my $taxid = "Unknown";
-  my $sptid = "Unknown";
-  my $sp_name = "Unknown";
-  my $strain_name = "Unknown";
-  my $p = 1;
-  my $n_reads = 0;
+open(TMP, $assembly_file) || die "can not open $assembly_file";
+while($ll=<TMP>){
+  chop($ll);
+  my @lls = split(/\t/, $ll);
+  if (($lls[1] =~ /\d+/) or ($lls[3] =~ /\d+/) or ($lls[1] =~ /contaminant/i) ) { #### valid taxid or contaminant
+    print $fh "$ll\n";
+    next;
+  }
+  $i = $lls[0];
 
+  my $p = 0;
   if ($assembly_reads_mapped{$i}) {
     my @reads = @{$assembly_reads_mapped{$i}};
-    $n_reads = $#reads+1;
-
+    my $n_reads = $#reads+1;
     my $host_reads = 0;
     foreach $j (@reads) {
       next unless ($read_from_host{$j});
       $host_reads++;
     }
     $p = $host_reads / $n_reads;
-    if ($p >= $p_cutoff) {
-      $taxid = "Host";
-      $sptid = "Host";
-      $sp_name = "Host";
-      $strain_name = "Host";
-    }
   }
 
-  print OUT "$i\t$sptid\t$sp_name\t$taxid\t$strain_name\t$p\t$n_reads\t$assembly_2_len{$i}\n";
+  if ($p >= $p_cutoff) {
+    print $fh "$i\tHost\tHost\tHost\tHost\t$p\t$n_reads\t$assembly_2_len{$i}\n";
+  }
+  else {
+    print $fh "$ll\n";
+  }
 }
+close(TMP);
 close(OUT) if ($output);
 
 
