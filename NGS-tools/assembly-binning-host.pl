@@ -114,9 +114,10 @@ while($ll=<TMP>){
   $i = $lls[0];
 
   my $p = 0;
+  my $n_reads = 0;
   if ($assembly_reads_mapped{$i}) {
     my @reads = @{$assembly_reads_mapped{$i}};
-    my $n_reads = $#reads+1;
+    $n_reads = $#reads+1;
     my $host_reads = 0;
     foreach $j (@reads) {
       next unless ($read_from_host{$j});
