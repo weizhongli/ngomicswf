@@ -282,8 +282,12 @@ foreach $KO (@found_KOs) {
   my $abs_adj   = $KO_abs_adj{$KO};
   my $r_abs     = float_e6( $abs    /$sum_abs );
   my $r_abs_adj = float_e6( $abs_adj/$sum_abs_adj );
-  my $abs_2     = float_e3( $abs    /$sum_ref_abs );
-  my $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+  my $abs_2     = 0;
+  my $abs_adj_2 = 0;
+  if ($sum_ref_abs > 0) {
+    $abs_2     = float_e3( $abs    /$sum_ref_abs );
+    $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+  }
 
   print OUT "$KO\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t$abs_2\t$abs_adj_2\t$KO_des{$KO}\n";
 }
@@ -331,8 +335,12 @@ foreach $i (@p) {
     if ( @member_KOs ) {
       $abs /= $#member_KOs+1;
       $abs_adj /= $#member_KOs+1;
-      $abs_2     = float_e3( $abs    /$sum_ref_abs );
-      $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+      $abs_2     = 0;
+      $abs_adj_2 = 0;
+      if ($sum_ref_abs > 0) {
+        $abs_2     = float_e3( $abs    /$sum_ref_abs );
+        $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+      }
     }
 
     my $cov = float_e3( $no/($#member_KOs+1) ) ;
@@ -376,8 +384,12 @@ for $i (@full_KO_link) {
     $abs_adj   = $KO_abs_adj{$KO};
     $r_abs     = float_e6( $abs    /$g_sum_abs );
     $r_abs_adj = float_e6( $abs_adj/$g_sum_abs_adj );
-    $abs_2     = float_e3( $abs    /$sum_ref_abs );
-    $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+    $abs_2     = 0;
+    $abs_adj_2 = 0;
+    if ($sum_ref_abs > 0) {
+      $abs_2     = float_e3( $abs    /$sum_ref_abs );
+      $abs_adj_2 = float_e6( $abs_adj/$sum_ref_abs_adj );
+    }
   }
   print OUT "\t$abs\t$abs_adj\t$r_abs\t$r_abs_adj\t$abs_2\t$abs_adj_2\n";
 }
