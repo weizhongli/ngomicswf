@@ -332,7 +332,7 @@ foreach $sptid (@all_sptids) {
         print OUT "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\t$sid_2_depth{$sid}\n";
       }
     }
-    print TAX "$sum_depth\n";
+    print TAX "\t$sum_depth\n";
   }
 }
 
