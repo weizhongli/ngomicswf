@@ -23,7 +23,7 @@ require "$script_dir/ann_local.pl";
 # annotate ORFs taxon and function, satisfy that ORFs belong to the same 
 # scaffold get same of consistent taxon
 use Getopt::Std;
-getopts("i:r:a:o:e:d:s:t:s:x:p:",\%opts);
+getopts("i:r:a:o:e:d:s:t:s:x:p:d:",\%opts);
 die usage() unless ($opts{i} and $opts{r} and $opts{a} and $opts{o} and $opts{t} and $opts{s} and $opts{x} and $opts{p});
 
 my $bl_file      = $opts{i}; #### blast alignment file in m8 format
@@ -39,9 +39,20 @@ my $output_sca   = $opts{p};
 my $cutoff_e     = $opts{e}; 
    $cutoff_e     = 1e-6 unless defined($cutoff_e);
 my $assembly_bin = $opts{s};
+my $depth_file   = $opts{d}; ### depth of coverage of assembly
 
 
 my ($i, $j, $k, $ll, $cmd);
+
+my %sid_2_depth = ();
+open(TMP, $depth_file) || die "can not open $depth_file";
+while($ll=<TMP>){
+  next if ($ll =~ /^#/);
+  chop($ll);
+  my ($sid, $x) = split(/\t/,$ll);
+  $sid_2_depth{$sid} = $x;
+}
+close(TMP);
 
 my %taxon_info = ();
 open(TMP, $taxon_file) || die "can not open $taxon_file";
@@ -269,9 +280,9 @@ close(LOG);
 open(OUT, "> $output_ann") || die "can not write to $output_ann";
 open(TAX, "> $output_tax") || die "can not write to $output_tax";
 open(SCA, "> $output_sca") || die "can not write to $output_sca";
-print TAX "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tNumber_scaffolds\tNumber_ORFs\n";
-print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFrac_alignment\tFamily\tDescription\n";
-print SCA "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tLength\tNumber_ORFs\n";
+print TAX "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tNumber_scaffolds\tNumber_ORFs\tSum_depth_x_length\n";
+print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFrac_alignment\tFamily\tDescription\tDepth\n";
+print SCA "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tLength\tNumber_ORFs\tDepth\n";
 #### output annotation with taxid
 my @all_tids = keys %taxid_member_scaffolds;
    @all_tids = sort { $taxid_orf_count{$b} <=> $taxid_orf_count{$a} } @all_tids;
@@ -297,11 +308,13 @@ foreach $sptid (@all_sptids) {
     my @sids = @{ $taxid_member_scaffolds{$tid} };
        @sids = sort { $scaffold_orf_count{$b} <=> $scaffold_orf_count{$a} } @sids;
     my @tid_info = @{$taxon_info{$tid}};
-    print TAX "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t", $#sids+1, "\t$taxid_orf_count{$tid}\n";
+    print TAX "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t", $#sids+1, "\t$taxid_orf_count{$tid}";
+    my $sum_depth = 0;
     foreach $sid (@sids) {
       my @orf_ids = @{$scaffold_member_orfs{$sid}};
       my $num_orfs = $#orf_ids+1;
-      print SCA "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\n";
+      print SCA "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\t$sid_2_depth{$sid}\n";
+      $sum_depth += $scaffold_2_len{$sid} * $sid_2_depth{$sid};
       next unless ($num_orfs>0);
 
       foreach $orf_id (@orf_ids) {
@@ -316,9 +329,10 @@ foreach $sptid (@all_sptids) {
           $frac1 = $frac;
           $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
         }
-        print OUT "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\n";
+        print OUT "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\t$sid_2_depth{$sid}\n";
       }
     }
+    print TAX "$sum_depth\n";
   }
 }
 
