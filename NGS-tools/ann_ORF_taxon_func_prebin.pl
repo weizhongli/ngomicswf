@@ -341,6 +341,7 @@ my $no_unknown_sid = 0;
 my $no_unknown_orf = 0;
 my @unbinned = keys %unbinned_scaffold;
    @unbinned = sort { $scaffold_2_len{$b} <=> $scaffold_2_len{$a} } @unbinned;
+my $sum_depth = 0;
 
 #foreach $sid (@all_sids) {
 foreach $sid (@unbinned) {
@@ -352,7 +353,8 @@ foreach $sid (@unbinned) {
     @orf_ids = @{$scaffold_member_orfs{$sid}};
     $num_orfs = $#orf_ids+1;
   }
-  print SCA "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\n";
+  print SCA "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\t$sid_2_depth{$sid}\n";
+  $sum_depth += $scaffold_2_len{$sid} * $sid_2_depth{$sid};
   next unless ($num_orfs>0);
 
   foreach $orf_id (@orf_ids) {
@@ -367,12 +369,12 @@ foreach $sid (@unbinned) {
       $frac1 = $frac;
       $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
     }
-    print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\n";
+    print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\t$sid_2_depth{$sid}\n";
   }
   $no_unknown_sid++;
   $no_unknown_orf += $scaffold_orf_count{$sid};
 }
-print TAX "unknown\t$no_unknown_sid\t$no_unknown_orf\n";
+print TAX "unknown\t$no_unknown_sid\t$no_unknown_orf\t$sum_depth\n";
 close(OUT);
 close(TAX);
 close(SCA);
@@ -416,5 +418,6 @@ $script_name -i blast_alignment_file -r cluster_info -a input ORF -o output ORF 
     -x taxon info file, created by ~/git/ngomicswf/NGS-tools/taxon_print_tid_rank_table.pl based on blast ref db
        this is different from -t, -t specify taxon file for kegg reference, -x specify taxon file for ref-genome,
        which is used to bin assembly
+    -d depth of coverage file for assembly
 EOD
 }
