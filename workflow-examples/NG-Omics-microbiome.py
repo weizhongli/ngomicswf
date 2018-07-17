@@ -354,4 +354,24 @@ $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJO
 '''
 }
 
+NGS_batch_jobs['ann-summary'] = {
+  'injobs'         : ['assembly-binning','blast-kegg-parse','assembly'],
+  'CMD_opts'       : ['kegg/keggf_taxon.txt','ref-genomes/ref_genome_taxon.txt','ref-genomes/ref_genome_full.ann'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 4,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+$ENV.NGS_root/NGS-tools/JCVI/assembly-orf-summary.pl -t $ENV.NGS_root/refs/$CMDOPTS.0 -x $ENV.NGS_root/refs/$CMDOPTS.1 \\
+  -b $INJOBS.0/assembly-bin2 -i $INJOBS.1/scaffold-ann.txt -o $SELF/assembly-orf-summary.txt \\
+  -a $ENV.NGS_root/refs/$CMDOPTS.2 -p $SELF/assembly-taxon -N 10 -d $INJOBS.0/scaffold-cov
+
+for i in `ls -1 $SELF/assembly-taxon*sids`;
+do
+    $ENV.NGS_root/NGS-tools/fasta_fetch_by_ids.pl -i $i -s $INJOBS.2/assembly/scaffold.fa  -o $i.faa
+    rm -f $i
+done;
+
+
+'''
+}
 
