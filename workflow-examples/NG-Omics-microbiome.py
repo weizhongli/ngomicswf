@@ -362,7 +362,7 @@ NGS_batch_jobs['ann-summary'] = {
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 $ENV.NGS_root/NGS-tools/JCVI/assembly-orf-summary.pl -t $ENV.NGS_root/refs/$CMDOPTS.0 -x $ENV.NGS_root/refs/$CMDOPTS.1 \\
-  -b $INJOBS.0/assembly-bin2 -i $INJOBS.1/scaffold-ann.txt -o $SELF/assembly-orf-summary.txt \\
+  -b $INJOBS.0/assembly-bin -i $INJOBS.1/scaffold-ann.txt -o $SELF/assembly-orf-summary.txt \\
   -a $ENV.NGS_root/refs/$CMDOPTS.2 -p $SELF/assembly-taxon -N 10 -d $INJOBS.0/scaffold-cov
 
 for i in `ls -1 $SELF/assembly-taxon*sids`;
