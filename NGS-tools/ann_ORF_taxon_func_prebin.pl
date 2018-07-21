@@ -23,7 +23,7 @@ require "$script_dir/ann_local.pl";
 # annotate ORFs taxon and function, satisfy that ORFs belong to the same 
 # scaffold get same of consistent taxon
 use Getopt::Std;
-getopts("i:r:a:o:e:d:s:t:s:x:p:d:",\%opts);
+getopts("i:r:a:o:e:d:s:t:s:x:p:d:X:",\%opts);
 die usage() unless ($opts{i} and $opts{r} and $opts{a} and $opts{o} and $opts{t} and $opts{s} and $opts{x} and $opts{p});
 
 my $bl_file      = $opts{i}; #### blast alignment file in m8 format
@@ -40,9 +40,24 @@ my $cutoff_e     = $opts{e};
    $cutoff_e     = 1e-6 unless defined($cutoff_e);
 my $assembly_bin = $opts{s};
 my $depth_file   = $opts{d}; ### depth of coverage of assembly
+my $contaminant_file = $opts{X};
+my $output_contaminant = "";
 
 
 my ($i, $j, $k, $ll, $cmd);
+
+my %contaminant_tids = ();
+if ($contaminant_file) {
+  $output_contaminant  = "$output_sca.contaminant";
+  open(TMP, $contaminant_file) || die "can not open $contaminant_file";
+  while($ll=<TMP>) {
+    chop($ll);
+    next if ($ll =~ /^#/);
+    my @lls = split(/\s+/, $ll);
+    $contaminant_tids{$lls[0]} = 1;
+  }
+  close(TMP);
+}
 
 my %sid_2_depth = ();
 open(TMP, $depth_file) || die "can not open $depth_file";
@@ -306,8 +321,15 @@ foreach $tid (@all_tids) {
 my @all_sptids = keys %sptid_member_tids;
    @all_sptids = sort { $sptid_orf_count{$b} <=> $sptid_orf_count{$a} } @all_sptids;
 
+my $with_contaminant = 0;
 foreach $sptid (@all_sptids) {
   foreach $tid (@{ $sptid_member_tids{$sptid} }) {
+    if ($contaminant_file) {
+      if ($contaminant_tids{ $tid }) {
+        $with_contaminant = 1; 
+        next;
+      }
+    }
     my @sids = @{ $taxid_member_scaffolds{$tid} };
        @sids = sort { $scaffold_orf_count{$b} <=> $scaffold_orf_count{$a} } @sids;
     my @tid_info = @{$taxon_info{$tid}};
@@ -382,6 +404,27 @@ close(OUT);
 close(TAX);
 close(SCA);
 
+if ($with_contaminant) {
+  open(OUTC, "> $output_contaminant") || die "can not write to $output_contaminant";
+
+  foreach $sptid (@all_sptids) {
+    foreach $tid (@{ $sptid_member_tids{$sptid} }) {
+      next unless ($contaminant_tids{ $tid });
+      my @sids = @{ $taxid_member_scaffolds{$tid} };
+         @sids = sort { $scaffold_orf_count{$b} <=> $scaffold_orf_count{$a} } @sids;
+      my @tid_info = @{$taxon_info{$tid}};
+      foreach $sid (@sids) {
+        my @orf_ids = @{$scaffold_member_orfs{$sid}};
+        my $num_orfs = $#orf_ids+1;
+        print OUTC "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\t$sid_2_depth{$sid}\t$sid_evidence{$sid}\n";
+
+      }
+    }
+  }
+  close(OUTC);
+}
+
+
 sub ORF_info {
   my $ll = shift;
   my ($start, $end, $frame) = ("-","-","-");
@@ -422,5 +465,6 @@ $script_name -i blast_alignment_file -r cluster_info -a input ORF -o output ORF 
        this is different from -t, -t specify taxon file for kegg reference, -x specify taxon file for ref-genome,
        which is used to bin assembly
     -d depth of coverage file for assembly
+    -X taxids of contaminants, optional, if exist, will label these as Contaminant
 EOD
 }
