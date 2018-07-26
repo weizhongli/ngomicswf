@@ -45,6 +45,30 @@ my %taxon_info = ();
 my %sp_name = ();
 my %strain_name = ();
 open(TMP, $taxon_file) || die "can not open $taxon_file";
+my $taxon_format = <<EOD;
+Col.0   #taxid  511145
+Col.1   rank    toprank
+Col.2   name    Escherichia coli str. K-12 substr. MG1655
+Col.3   superkingdom    Bacteria
+Col.4   superkingdom_ti 2
+Col.5   kingdom \N
+Col.6   kingdom_ti      \N
+Col.7   phylum  Proteobacteria
+Col.8   phylum_ti       1224
+Col.9   class   Gammaproteobacteria
+Col.10  class_ti        1236
+Col.11  order   Enterobacterales
+Col.12  order_ti        91347
+Col.13  family  Enterobacteriaceae
+Col.14  family_ti       543
+Col.15  genus   Escherichia
+Col.16  genus_ti        561
+Col.17  species Escherichia coli
+Col.18  species_ti      562
+Col.19  toprank Escherichia coli str. K-12 substr. MG1655
+Col.20  toprank_ti      511145
+EOD
+
 while($ll=<TMP>) {
   chop($ll);
   next if ($ll =~ /^#/);
