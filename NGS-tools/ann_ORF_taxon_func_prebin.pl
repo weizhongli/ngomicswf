@@ -354,7 +354,7 @@ foreach $sptid (@all_sptids) {
     my @sids = @{ $taxid_member_scaffolds{$tid} };
        @sids = sort { $scaffold_orf_count{$b} <=> $scaffold_orf_count{$a} } @sids;
     my @tid_info = @{$taxon_info{$tid}};
-    my $tid_str = "$sptid\t$tid\t$tid_info[1]\t$tid_info[3]\t$tid_info[5]\t$tid_info[7]\t$tid_info[9]\t$tid_info[11]\t$tid_info[13]\t$tid_info[15]\t$tid_info[0]";
+    my $tid_str = "$tid_info[16]\t$tid\t$tid_info[1]\t$tid_info[3]\t$tid_info[5]\t$tid_info[7]\t$tid_info[9]\t$tid_info[11]\t$tid_info[13]\t$tid_info[15]\t$tid_info[0]";
     print TAX "$tid_str\t", $#sids+1, "\t$taxid_orf_count{$tid}";
     my $sum_depth = 0;
     foreach $sid (@sids) {
