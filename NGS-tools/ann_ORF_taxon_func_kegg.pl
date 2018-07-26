@@ -237,12 +237,13 @@ while($ll=<TMP>) {
   next if ($ll =~ /^#/);
   chop($ll);
   my @lls = split(/\t/, $ll);
-  my $fr = $lls[10]; #### fraction of coverage on reference protein
+     
+  my $fr = $lls[10+7]; #### fraction of coverage on reference protein
      $fr = 1.0 unless (($fr =~ /^\d/) and ($fr > 0.0));
-  my $KO = $lls[11]; #### if hit KO
+  my $KO = $lls[11+7]; #### if hit KO
   next unless ($KO =~ /^K\d+/);
 
-  my $ORF = $lls[5];
+  my $ORF = $lls[5+7];
   my $depth = 1;
   if ($ORF_depth_flag and $ORF_depth{$ORF}) {
     $depth =  $ORF_depth{$ORF};
