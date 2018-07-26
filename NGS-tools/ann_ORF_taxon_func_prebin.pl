@@ -313,14 +313,15 @@ foreach $round (qw/1 2/) {
 close(LOG);
 
 
-
 ######################### output annotation table
+my @ranks = qw/Superkingdom Kingdom Phylum Class Order Family Genus Species Genome/;
+open(SCA, "> $output_sca") || die "can not write to $output_sca";
 open(OUT, "> $output_ann") || die "can not write to $output_ann";
 open(TAX, "> $output_tax") || die "can not write to $output_tax";
-open(SCA, "> $output_sca") || die "can not write to $output_sca";
-print TAX "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tNumber_scaffolds\tNumber_ORFs\tSum_depth_x_length\n";
-print OUT "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFrac_alignment\tFamily\tDescription\tDepth\tEvidence\n";
-print SCA "#Species_taxid\tSpecies\tGenome_taxid\tGenome\tScaffold\tLength\tNumber_ORFs\tDepth\tEvidence\n";
+print TAX "#Species_taxid\tTax_id\t", join("\t", @ranks), "\tNumber_scaffolds\tNumber_ORFs\tSum_depth_x_length\n";
+print SCA "#Species_taxid\tTax_id\t", join("\t", @ranks), "\tScaffold\tLength\tNumber_ORFs\tDepth\tEvidence\n";
+print OUT "#Species_taxid\tTax_id\t", join("\t", @ranks), "\tScaffold\tORF\tStart\tEnd\tFrame\tIden%\tFrac_alignment\tFamily\tDescription\tDepth\tEvidence\n";
+
 #### output annotation with taxid
 my @all_tids = keys %taxid_member_scaffolds;
    @all_tids = sort { $taxid_orf_count{$b} <=> $taxid_orf_count{$a} } @all_tids;
@@ -353,12 +354,13 @@ foreach $sptid (@all_sptids) {
     my @sids = @{ $taxid_member_scaffolds{$tid} };
        @sids = sort { $scaffold_orf_count{$b} <=> $scaffold_orf_count{$a} } @sids;
     my @tid_info = @{$taxon_info{$tid}};
-    print TAX "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t", $#sids+1, "\t$taxid_orf_count{$tid}";
+    my $tid_str = "$sptid\t$tid\t$tid_info[1]\t$tid_info[3]\t$tid_info[5]\t$tid_info[7]\t$tid_info[9]\t$tid_info[11]\t$tid_info[13]\t$tid_info[15]\t$tid_info[0]";
+    print TAX "$tid_str\t", $#sids+1, "\t$taxid_orf_count{$tid}";
     my $sum_depth = 0;
     foreach $sid (@sids) {
       my @orf_ids = @{$scaffold_member_orfs{$sid}};
       my $num_orfs = $#orf_ids+1;
-      print SCA "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\t$sid_2_depth{$sid}\t$sid_evidence{$sid}\n";
+      print SCA "$tid_str\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\t$sid_2_depth{$sid}\t$sid_evidence{$sid}\n";
       $sum_depth += $scaffold_2_len{$sid} * $sid_2_depth{$sid};
       next unless ($num_orfs>0);
 
@@ -374,7 +376,7 @@ foreach $sptid (@all_sptids) {
           $frac1 = $frac;
           $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
         }
-        print OUT "$tid_info[16]\t$tid_info[15]\t$tid\t$tid_info[0]\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\t$sid_2_depth{$sid}\t$sid_evidence{$sid}\n";
+        print OUT "$tid_str\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\t$sid_2_depth{$sid}\t$sid_evidence{$sid}\n";
       }
     }
     print TAX "\t$sum_depth\n";
@@ -389,6 +391,7 @@ my @unbinned = keys %unbinned_scaffold;
 my $sum_depth = 0;
 
 #foreach $sid (@all_sids) {
+my $tid_str = "Unknown" . ("\tUnknown"x10);
 foreach $sid (@unbinned) {
   next if defined($scaffold_2_taxid{$sid});
   my $tid = "Unknown";
@@ -398,7 +401,7 @@ foreach $sid (@unbinned) {
     @orf_ids = @{$scaffold_member_orfs{$sid}};
     $num_orfs = $#orf_ids+1;
   }
-  print SCA "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\t$sid_2_depth{$sid}\tNone\n";
+  print SCA "$tid_str\t$sid\t$scaffold_2_len{$sid}\t$num_orfs\t$sid_2_depth{$sid}\tNone\n";
   $sum_depth += $scaffold_2_len{$sid} * $sid_2_depth{$sid};
   next unless ($num_orfs>0);
 
@@ -414,12 +417,12 @@ foreach $sid (@unbinned) {
       $frac1 = $frac;
       $KO = $ref_2_KO{$rid} if (defined($ref_2_KO{$rid}));
     }
-    print OUT "$tid\tUnknown\tUnknown\tUnknown\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\t$sid_2_depth{$sid}\tNone\n";
+    print OUT "$tid_str\t$sid\t$orf_id\t$orf_info{$orf_id}\t$iden1\t$frac1\t$KO\t$ann\t$sid_2_depth{$sid}\tNone\n";
   }
   $no_unknown_sid++;
   $no_unknown_orf += $scaffold_orf_count{$sid};
 }
-print TAX "unknown\t$no_unknown_sid\t$no_unknown_orf\t$sum_depth\n";
+print TAX "$tid_str\t$no_unknown_sid\t$no_unknown_orf\t$sum_depth\n";
 close(OUT);
 close(TAX);
 close(SCA);
