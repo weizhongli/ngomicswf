@@ -75,8 +75,8 @@ Col.1   rank    toprank
 Col.2   name    Escherichia coli str. K-12 substr. MG1655
 Col.3   superkingdom    Bacteria
 Col.4   superkingdom_ti 2
-Col.5   kingdom \N
-Col.6   kingdom_ti      \N
+Col.5   kingdom \\N
+Col.6   kingdom_ti      \\N
 Col.7   phylum  Proteobacteria
 Col.8   phylum_ti       1224
 Col.9   class   Gammaproteobacteria
