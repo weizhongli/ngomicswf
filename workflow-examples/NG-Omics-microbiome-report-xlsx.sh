@@ -15,6 +15,8 @@ mkdir -p $2
 s_dir=`dirname $0`
 s_dir=`dirname $s_dir`
 p_pl="$s_dir/NGS-tools/NGS-table-merge.pl -s $1 -t 0 -p 0"
+xlsx_py="$s_dir/NGS-tools/NGS-tsv_2_xlsx.py"
+
 
 $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-full-des      -o $2/module-KO-depth.tsv               -c 0 -i 0 -v 8  -a 1,2,3,4,5,6,7
 $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-full-des      -o $2/module-KO-depth-adjusted.tsv      -c 0 -i 0 -v 9  -a 1,2,3,4,5,6,7
@@ -75,6 +77,13 @@ $p_pl -f taxonomy/taxon.order.txt           -o $2/taxon-order.tsv        -c 1e-4
 $p_pl -f taxonomy/taxon.class.txt           -o $2/taxon-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 5
 $p_pl -f taxonomy/taxon.phylum.txt          -o $2/taxon-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 4
 
+$p_pl -f taxonomy/taxon.species.txt         -o $2/taxon-depth-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 10
+$p_pl -f taxonomy/taxon.genus.txt           -o $2/taxon-depth-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 9
+$p_pl -f taxonomy/taxon.family.txt          -o $2/taxon-depth-family.tsv       -c 1e-4   -i 0 -a 1,2,3,4,5,6     -v 8
+$p_pl -f taxonomy/taxon.order.txt           -o $2/taxon-depth-order.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5       -v 7
+$p_pl -f taxonomy/taxon.class.txt           -o $2/taxon-depth-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 6
+$p_pl -f taxonomy/taxon.phylum.txt          -o $2/taxon-depth-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 5
+
 
 cd $2
 $xlsx_py -i module-KO-depth.tsv,module-KO-depth-adjusted.tsv,module-KO-R.depth.tsv,module-KO-R.depth-adjusted.tsv,module-depth.tsv,module-depth-adjusted.tsv,module-R.depth.tsv,module-R.depth-adjusted.tsv -o module.xlsx
@@ -86,3 +95,4 @@ $xlsx_py -i assembly-num_scaffolds.txt,assembly-len_scaffolds.txt,assembly-num_O
 $xlsx_py -i assembly-genome-scaffolds.tsv,assembly-genome-length.tsv,assembly-genome-coverage.tsv,assembly-genome-depth.tsv,assembly-genome-ORFs.tsv -o assembly-genome.xlsx
 $xlsx_py -i assembly-species-scaffolds.tsv,assembly-species-length.tsv,assembly-species-coverage.tsv,assembly-species-depth.tsv,assembly-species-ORFs.tsv -o assembly-species.xlsx
 $xlsx_py -i taxon-superkingdom.tsv,taxon-phylum.tsv,taxon-class.tsv,taxon-order.tsv,taxon-family.tsv,taxon-genus.tsv,taxon-species.tsv -o taxon.xlsx
+$xlsx_py -i taxon-depth-phylum.tsv,taxon-depth-class.tsv,taxon-depth-order.tsv,taxon-depth-family.tsv,taxon-depth-genus.tsv,taxon-depth-species.tsv -o taxon-depth.xlsx
