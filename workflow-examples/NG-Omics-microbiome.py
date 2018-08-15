@@ -118,6 +118,37 @@ fi
 '''
 }
 
+#### mitochondron analysis
+#### ~100 mitochondria in a mammalian cell, and each mitochondrion has 2–10 copies of mtDNA
+NGS_batch_jobs['mito-ana'] = {
+  'injobs'         : ['qc'],          # start with high quality reads
+  'CMD_opts'       : ['mito/HS_mito'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
+  'non_zero_files' : ['mito.vcf'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+$ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.0 \\
+  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 | \\
+  $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/mito.top.bam
+
+$ENV.NGS_root/apps/bin/samtools view $SELF/mito.top.bam -F 0x004 | cut -f 1 > $SELF/mito-hit.ids
+$ENV.NGS_root/apps/bin/samtools view $SELF/mito.top.bam | \\
+  $ENV.NGS_root/NGS-tools/sam-HS-depth.pl -i - -a $ENV.NGS_root/refs/$CMDOPTS.0.ann -o $SELF/mito-depth
+
+$ENV.NGS_root/apps/bin/samtools sort $SELF/mito.top.bam -o $SELF/mito.sorted.bam
+$ENV.NGS_root/apps/bin/samtools mpileup -o $SELF/mito.mpileup -f /local/ifs2_projdata/8460/projects/WOUND/wli/refs/mito/HS_mito    $SELF/mito.sorted.bam
+$ENV.NGS_root/apps/bin/samtools mpileup -o $SELF/mito.raw.vcf -f /local/ifs2_projdata/8460/projects/WOUND/wli/refs/mito/HS_mito -v $SELF/mito.sorted.bam
+
+java -jar $ENV.NGS_root/apps/VarScan-2.4.2/VarScan.v2.4.2.jar  pileup2snp $SELF/mito.mpileup > $SELF/mito.vcf
+
+#$ENV.NGS_root/NGS-tools/fasta_fetch_by_ids.pl -i $SELF/mito-hit.ids -s $INJOBS.0/R1.fa -o $SELF/mito-R1.fa
+#$ENV.NGS_root/NGS-tools/fasta_fetch_by_ids.pl -i $SELF/mito-hit.ids -s $INJOBS.0/R2.fa -o $SELF/mito-R2.fa
+
+'''
+}
+
 NGS_batch_jobs['reads-mapping'] = {
   'injobs'         : ['remove-host'],
   'CMD_opts'       : ['75'],          # significant score cutoff
