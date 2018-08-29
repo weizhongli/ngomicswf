@@ -87,7 +87,7 @@ NGS_batch_jobs['remove-host'] = {
 if [ "$CMDOPTS.0" = "bwa" ]
 then
   $ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.1 \\
-  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 1 -O $SELF/host-hit.ids | \\
+  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/host-hit.ids | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/host.top.bam
 
   $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
@@ -118,39 +118,27 @@ fi
 '''
 }
 
-#### mitochondron analysis
-#### ~100 mitochondria in a mammalian cell, and each mitochondrion has 2–10 copies of mtDNA
-NGS_batch_jobs['mito-ana'] = {
-  'injobs'         : ['qc'],          # start with high quality reads
-  'CMD_opts'       : ['mito/HS_mito'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
-  'non_zero_files' : ['mito.vcf'],
+NGS_batch_jobs['remove-rRNA'] = {
+  'injobs'         : ['remove-host'],          # start with high quality reads
+  'CMD_opts'       : ['total_RNA/total_RNA'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
+  'non_zero_files' : ['non-rRNA-R1.fa','non-rRNA-R2.fa'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
+$ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60  $ENV.NGS_root/refs/$CMDOPTS.0 \\
+  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/rRNA-hit.ids | \\
+  $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/rRNA.top.bam
 
-$ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.0 \\
-  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 | \\
-  $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/mito.top.bam
-
-$ENV.NGS_root/apps/bin/samtools view $SELF/mito.top.bam -F 0x004 | cut -f 1 > $SELF/mito-hit.ids
-$ENV.NGS_root/apps/bin/samtools view $SELF/mito.top.bam | \\
-  $ENV.NGS_root/NGS-tools/sam-HS-depth.pl -i - -a $ENV.NGS_root/refs/$CMDOPTS.0.ann -o $SELF/mito-depth
-
-$ENV.NGS_root/apps/bin/samtools sort $SELF/mito.top.bam -o $SELF/mito.sorted.bam
-$ENV.NGS_root/apps/bin/samtools mpileup -o $SELF/mito.mpileup -f /local/ifs2_projdata/8460/projects/WOUND/wli/refs/mito/HS_mito    $SELF/mito.sorted.bam
-$ENV.NGS_root/apps/bin/samtools mpileup -o $SELF/mito.raw.vcf -f /local/ifs2_projdata/8460/projects/WOUND/wli/refs/mito/HS_mito -v $SELF/mito.sorted.bam
-
-java -jar $ENV.NGS_root/apps/VarScan-2.4.2/VarScan.v2.4.2.jar  pileup2snp $SELF/mito.mpileup > $SELF/mito.vcf
-
-#$ENV.NGS_root/NGS-tools/fasta_fetch_by_ids.pl -i $SELF/mito-hit.ids -s $INJOBS.0/R1.fa -o $SELF/mito-R1.fa
-#$ENV.NGS_root/NGS-tools/fasta_fetch_by_ids.pl -i $SELF/mito-hit.ids -s $INJOBS.0/R2.fa -o $SELF/mito-R2.fa
+$ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/rRNA-hit.ids -s  $INJOBS.0/non-host-R1.fa -o $SELF/non-rRNA-R1.fa
+$ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/rRNA-hit.ids -s  $INJOBS.0/non-host-R2.fa -o $SELF/non-rRNA-R2.fa
 
 '''
 }
 
+
 NGS_batch_jobs['reads-mapping'] = {
-  'injobs'         : ['remove-host'],
+  'injobs'         : ['remove-rRNA'],
   'CMD_opts'       : ['75'],          # significant score cutoff
   'non_zero_files' : ['ref_genome.top.bam'],
   'execution'      : 'qsub_1',        # where to execute
@@ -159,18 +147,17 @@ NGS_batch_jobs['reads-mapping'] = {
   'command'        : '''
 
 #$ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
-#  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.raw.bam
+#  $INJOBS.0/non-rRNA-R1.fa $INJOBS.0/non-rRNA-R2.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.raw.bam
 
 $ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
-  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T $CMDOPTS.0 | \\
+  $INJOBS.0/non-rRNA-R1.fa $INJOBS.0/non-rRNA-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T $CMDOPTS.0 | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.top.bam
-
 
 '''
 }
 
 NGS_batch_jobs['taxonomy'] = {
-  'injobs'         : ['remove-host','reads-mapping'],
+  'injobs'         : ['remove-rRNA','reads-mapping'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 8,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -179,7 +166,7 @@ NGS_batch_jobs['taxonomy'] = {
 # Add additional BAM filtering steps below
 
 # count total number of input reads
-NUM_reads=$(grep -c "^>" $INJOBS.0/non-host-R1.fa)
+NUM_reads=$(grep -c "^>" $INJOBS.0/non-rRNA-R1.fa)
 
 $ENV.NGS_root/apps/bin/samtools view $INJOBS.1/ref_genome.top.bam | \\
   $ENV.NGS_root/NGS-tools/sam-to-taxon-abs-ez.pl -a $ENV.NGS_root/refs/ref-genomes/ref_genome_full.ann -t $ENV.NGS_root/refs/ref-genomes/ref_genome_taxon.txt \\
@@ -190,7 +177,7 @@ $ENV.NGS_root/apps/bin/samtools view $INJOBS.1/ref_genome.top.bam | \\
 
 
 NGS_batch_jobs['assembly'] = {
-  'injobs'         : ['remove-host'],
+  'injobs'         : ['remove-rRNA'],
   'CMD_opts'       : ['spade', '250'],       # can be idba-ud or spade , ## 250 confit length cutoff
   'non_zero_files' : ['assembly/scaffold.fa'],
   'execution'      : 'qsub_1',        # where to execute
@@ -199,13 +186,13 @@ NGS_batch_jobs['assembly'] = {
   'command'        : '''
 if [ "$CMDOPTS.0" = "idba-ud" ]
 then
-  $ENV.NGS_root/NGS-tools/PE-2file-to-1file.pl -i $INJOBS.0/non-host-R1.fa,$INJOBS.0/non-host-R2.fa -r 0 > $SELF/input.fa
+  $ENV.NGS_root/NGS-tools/PE-2file-to-1file.pl -i $INJOBS.0/non-rRNA-R1.fa,$INJOBS.0/non-rRNA-R2.fa -r 0 > $SELF/input.fa
   $ENV.NGS_root/apps/bin/idba_ud -r $SELF/input.fa -o $SELF/assembly --mink=50 --maxk=80 --step=10 --num_threads=16 --min_contig=$CMDOPTS.1 
   rm -f $SELF/input.fa $SELF/assembly/kmer $SELF/assembly/local* $SELF/assembly/contig* $SELF/assembly/graph*
   
 elif [ "$CMDOPTS.0" = "spade" ]
 then
-  python $ENV.NGS_root/apps/SPAdes/bin/spades.py -1 $INJOBS.0/non-host-R1.fa -2 $INJOBS.0/non-host-R2.fa --meta --only-assembler -o $SELF/assembly -t 16
+  python $ENV.NGS_root/apps/SPAdes/bin/spades.py -1 $INJOBS.0/non-rRNA-R1.fa -2 $INJOBS.0/non-rRNA-R2.fa --meta --only-assembler -o $SELF/assembly -t 16
   mv $SELF/assembly/scaffolds.fasta $SELF/assembly/scaffold.fa
   rm -rf $SELF/assembly/K*
   rm -rf $SELF/assembly/tmp
@@ -260,7 +247,7 @@ $ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $SELF/ORF.faa -d $INJOBS.
 
 
 NGS_batch_jobs['assembly-binning'] = {
-  'injobs'         : ['assembly','remove-host','reads-mapping','ORF-prediction'],
+  'injobs'         : ['assembly','remove-rRNA','reads-mapping','ORF-prediction'],
   'CMD_opts'       : ['75','ref-genomes/ref_genome_taxon.txt'],     # alignment cutoff score for both R1 and R2
   'non_zero_files' : ['assembly-bin'],
   'execution'      : 'qsub_1',        # where to execute
@@ -270,7 +257,7 @@ NGS_batch_jobs['assembly-binning'] = {
 
 $ENV.NGS_root/apps/bin/bwa index -a bwtsw -p $SELF/assembly $INJOBS.0/assembly/scaffold.fa
 
-$ENV.NGS_root/apps/bin/bwa mem -t 16 $SELF/assembly $INJOBS.1/non-host-R1.fa $INJOBS.1/non-host-R2.fa | \\
+$ENV.NGS_root/apps/bin/bwa mem -t 16 $SELF/assembly $INJOBS.1/non-rRNA-R1.fa $INJOBS.1/non-rRNA-R2.fa | \\
   $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/assembly-mapping.sam
 $ENV.NGS_root/NGS-tools/sam-to-seq-depth-cov.pl -s $INJOBS.0/assembly/scaffold.fa -o $SELF/scaffold-cov < $SELF/assembly-mapping.sam
 
