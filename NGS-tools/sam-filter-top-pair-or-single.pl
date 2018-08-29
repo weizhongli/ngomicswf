@@ -12,21 +12,27 @@
 #### still don't allow reads that mapped to different ref, i.e. 6th field is not "="
 
 use Getopt::Std;
-getopts("T:o:F:",\%opts);
+getopts("T:o:F:O:",\%opts);
 die usage() unless ($opts{T});
 
 my $map_score_cutoff = $opts{T};
 my $output           = $opts{o};
 my $proper_flag      = $opts{F};
-   $proper_flag      =1 unless (defined($proper_flag));
+   $proper_flag      = 1 unless (defined($proper_flag));
+my $output_ID        = $opts{O};
 
 my ($i, $j, $k, $ll, $cmd);
 
 my $fh = "STDOUT";
 if ($output) {
-  open(OUT, ">$output") || die "Can not write to $OUT";
+  open(OUT, ">$output") || die "Can not write to $output";
   $fh = "OUT";
 }
+
+if (defined($output_ID)) {
+  open(OUTID, "> $output_ID") || die "Can not write to $output_ID";
+}
+
 
 my $last_id = "";
 my $R1_pri_aln = "";
@@ -96,6 +102,7 @@ EOD
       if ($print_flag) {
         print $fh "$R1_pri_aln\n" if ($R1_pri_aln);
         print $fh "$R2_pri_aln\n" if ($R2_pri_aln);
+        print OUTID "$last_id\n" if ($output_ID);
       }
       $R1_pri_aln = "";
       $R2_pri_aln = "";
@@ -110,7 +117,7 @@ EOD
 }
 
    #### last reads
-    if    ($id    ne $last_id) {
+    if    ($last_id) {
       my $print_flag = 1;
       if ($R1_pri_aln and $R2_pri_aln) {
         my @t_R1 = split(/\t/, $R1_pri_aln);
@@ -136,6 +143,7 @@ EOD
       if ($print_flag) {
         print $fh "$R1_pri_aln\n" if ($R1_pri_aln);
         print $fh "$R2_pri_aln\n" if ($R2_pri_aln);
+        print OUTID "$last_id\n" if ($output_ID);
       }
       $R1_pri_aln = "";
       $R2_pri_aln = "";
@@ -143,6 +151,7 @@ EOD
 
 
 close(OUT) if ($output);
+close(OUTID) if ($output_ID);
 
 sub sam_flag {
   my $FLAG = shift;
@@ -195,6 +204,7 @@ usage:
        proper pair has FLAG 0x0002
        if the purpose is to keep good alignments, suggest use default value,
        if the purpose is to keep alignments for filtering, e.g. remove-host, suggest use 0.
+    -O optional output file for read IDs
 EOD
 }
 ########## END usage
