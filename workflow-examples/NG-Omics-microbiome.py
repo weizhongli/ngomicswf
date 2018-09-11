@@ -119,7 +119,7 @@ fi
 }
 
 #### mitochondron analysis
-#### ~100 mitochondria in a mammalian cell, and each mitochondrion has 2–10 copies of mtDNA
+#### ~100 mitochondria in a mammalian cell, and each mitochondrion has 2-10 copies of mtDNA
 NGS_batch_jobs['mito-ana'] = {
   'injobs'         : ['qc'],          # start with high quality reads
   'CMD_opts'       : ['mito/HS_mito'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
