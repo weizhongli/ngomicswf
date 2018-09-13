@@ -185,6 +185,18 @@ $ENV.NGS_root/apps/bin/samtools view $INJOBS.1/ref_genome.top.bam | \\
   $ENV.NGS_root/NGS-tools/sam-to-taxon-abs-ez.pl -a $ENV.NGS_root/refs/ref-genomes/ref_genome_full.ann -t $ENV.NGS_root/refs/ref-genomes/ref_genome_taxon.txt \\
   -o $SELF/taxon -c 1e-7 -N $NUM_reads
 
+# number of host reads
+NUM_HOST=0
+if [ -s $INJOBS.0/host-hit.ids ]
+then
+  NUM_HOST=$(grep -c "." $INJOBS.0/host-hit.ids)
+else
+  NUM_HOST=0
+fi
+
+cp -p $SELF/taxon.superkingdom.txt $SELF/taxon.superkingdom-whost.txt
+echo "Host Host $NUM_HOST" >> $SELF/taxon.superkingdom-whost.txt
+
 '''
 }
 
