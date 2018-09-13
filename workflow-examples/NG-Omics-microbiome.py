@@ -195,7 +195,7 @@ else
 fi
 
 cp -p $SELF/taxon.superkingdom.txt $SELF/taxon.superkingdom-whost.txt
-echo -e "Host\tHost\t$NUM_HOST" >> $SELF/taxon.superkingdom-whost.txt
+echo -e "Host\\tHost\\t$NUM_HOST" >> $SELF/taxon.superkingdom-whost.txt
 
 '''
 }
