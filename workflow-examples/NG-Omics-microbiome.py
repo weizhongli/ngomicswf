@@ -44,6 +44,7 @@ NGS_executions['sh_1'] = {
 NGS_batch_jobs = {}
 NGS_batch_jobs['qc'] = {
   'CMD_opts'         : ['100','NexteraPE'],
+  'non_zero_files' : ['R1.fa','R2.fa','qc.txt'],
   'execution'        : 'qsub_1',               # where to execute
   'cores_per_cmd'    : 4,                    # number of threads used by command below
   'no_parallel'      : 1,                    # number of total jobs to run using command below
@@ -60,16 +61,15 @@ else
       SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:$CMDOPTS.0 MAXINFO:80:0.5 1>$SELF/qc.stdout 2>$SELF/qc.stderr
 fi
 
-
 perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr($_,1); $a=<>; print $a; $a=<>; $a=<>;}}' < $SELF/R1.fq > $SELF/R1.fa &
 perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr($_,1); $a=<>; print $a; $a=<>; $a=<>;}}' < $SELF/R2.fq > $SELF/R2.fa &
 
 wait
 rm -f $SELF/R1.fq $SELF/R2.fq $SELF/R1-s.fq $SELF/R2-s.fq
 
+#### qc.txt
 NUM_reads_total=$(grep "Input Read Pairs"  $SELF/qc.stderr | cut -f 4 -d " ")
 NUM_reads_pass=$(grep "Input Read Pairs"  $SELF/qc.stderr | cut -f 7 -d " ")
-
 echo -e "Total_reads\\t$NUM_reads_total" > $SELF/qc.txt
 echo -e "QC_reads\\t$NUM_reads_pass" >> $SELF/qc.txt
 
