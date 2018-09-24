@@ -101,7 +101,7 @@ fi
 #### chdir
 cd $2
 
-if [-s module-KO-depth.tsv ]
+if [ -s module-KO-depth.tsv ]
 then
   $xlsx_py -i module-KO-depth.tsv,module-KO-depth-adjusted.tsv,module-KO-R.depth.tsv,module-KO-R.depth-adjusted.tsv,module-depth.tsv,module-depth-adjusted.tsv,module-R.depth.tsv,module-R.depth-adjusted.tsv -o module.xlsx
   $xlsx_py -i pathway-KO-depth.tsv,pathway-KO-depth-adjusted.tsv,pathway-KO-R.depth.tsv,pathway-KO-R.depth-adjusted.tsv,pathway-depth.tsv,pathway-depth-adjusted.tsv,pathway-R.depth.tsv,pathway-R.depth-adjusted.tsv -o pathway.xlsx
