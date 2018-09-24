@@ -193,14 +193,14 @@ fi
 NUM_TRNA_RRNA=0
 if [ -s $INJOBS.1/rRNA-hit.ids ]
 then
-  NUM_TRNA_RRNA=$(grep -c "." $INJOBS.0/host-hit.ids)
+  NUM_TRNA_RRNA=$(grep -c "." $INJOBS.1/rRNA-hit.ids)
 else
   NUM_TRNA_RRNA=0
 fi
 
 cp -p $SELF/taxon.superkingdom.txt $SELF/taxon.superkingdom-whost.txt
 echo -e "Host\\tHost\\t$NUM_HOST" >> $SELF/taxon.superkingdom-whost.txt
-echo -e "Host\\tHost\\t$NUM_TRNA_RRNA" >> $SELF/taxon.superkingdom-whost.txt
+echo -e "rRNA_tRNA\\trRNA_tRNA\\t$NUM_TRNA_RRNA" >> $SELF/taxon.superkingdom-whost.txt
 
 '''
 }
