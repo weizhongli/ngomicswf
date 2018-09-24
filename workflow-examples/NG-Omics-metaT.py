@@ -165,7 +165,7 @@ $ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-gen
 }
 
 NGS_batch_jobs['taxonomy'] = {
-  'injobs'         : ['remove-rRNA','reads-mapping'],
+  'injobs'         : ['remove-host', 'remove-rRNA','reads-mapping'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 8,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -174,11 +174,33 @@ NGS_batch_jobs['taxonomy'] = {
 # Add additional BAM filtering steps below
 
 # count total number of input reads
-NUM_reads=$(grep -c "^>" $INJOBS.0/non-rRNA-R1.fa)
+NUM_reads=$(grep -c "^>" $INJOBS.1/non-rRNA-R1.fa)
 
-$ENV.NGS_root/apps/bin/samtools view $INJOBS.1/ref_genome.top.bam | \\
+$ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome.top.bam | \\
   $ENV.NGS_root/NGS-tools/sam-to-taxon-abs-ez.pl -a $ENV.NGS_root/refs/ref-genomes/ref_genome_full.ann -t $ENV.NGS_root/refs/ref-genomes/ref_genome_taxon.txt \\
   -o $SELF/taxon -c 1e-7 -N $NUM_reads
+
+# number of host reads
+NUM_HOST=0
+if [ -s $INJOBS.0/host-hit.ids ]
+then
+  NUM_HOST=$(grep -c "." $INJOBS.0/host-hit.ids)
+else
+  NUM_HOST=0
+fi
+
+# number of rRNA, tRNA reads
+NUM_TRNA_RRNA=0
+if [ -s $INJOBS.1/rRNA-hit.ids ]
+then
+  NUM_TRNA_RRNA=$(grep -c "." $INJOBS.0/host-hit.ids)
+else
+  NUM_TRNA_RRNA=0
+fi
+
+cp -p $SELF/taxon.superkingdom.txt $SELF/taxon.superkingdom-whost.txt
+echo -e "Host\\tHost\\t$NUM_HOST" >> $SELF/taxon.superkingdom-whost.txt
+echo -e "Host\\tHost\\t$NUM_TRNA_RRNA" >> $SELF/taxon.superkingdom-whost.txt
 
 '''
 }
