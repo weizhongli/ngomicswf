@@ -79,6 +79,9 @@ fi
 
 if [ -s $SAM1/taxonomy/taxon.superkingdom.txt ]
 then
+  $p_pl -f qc/qc.txt -o $2/qc.tsv -c 0 -i 0 -v 1
+  $p_pl -f taxonomy/taxon.superkingdom-whost.txt    -o $2/taxon-superkingdom-whost.tsv -c 0      -i 0 -a 1 -v 2
+
   $p_pl -f taxonomy/taxon.superkingdom.txt    -o $2/taxon-superkingdom.tsv -c 0      -i 0 -a 1 -v 2
   $p_pl -f taxonomy/taxon.species.txt         -o $2/taxon-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 9
   $p_pl -f taxonomy/taxon.genus.txt           -o $2/taxon-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 8
