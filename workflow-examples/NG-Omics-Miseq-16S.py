@@ -55,6 +55,14 @@ perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr(
 
 wait
 rm -f $SELF/R1.fq $SELF/R2.fq $SELF/R1-s.fq $SELF/R2-s.fq
+
+#### qc.txt
+NUM_reads_total=$(grep "Input Read Pairs"  $SELF/qc.stderr | cut -f 4 -d " ")
+NUM_reads_pass=$(grep "Input Read Pairs"  $SELF/qc.stderr | cut -f 7 -d " ")
+echo -e "#Reads\\tNumber" > $SELF/qc.txt
+echo -e "Total_reads\\t$NUM_reads_total" >> $SELF/qc.txt
+echo -e "QC_reads\\t$NUM_reads_pass" >> $SELF/qc.txt
+
 '''
 }
 
