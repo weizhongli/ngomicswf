@@ -340,6 +340,7 @@ wait
 
 NGS_batch_jobs['pfam-parse'] = {
   'injobs'         : ['pfam', 'ORF-prediction'],
+  'non_zero_files' : ['pfam-ann.txt'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -375,20 +376,21 @@ wait
 }
 
 NGS_batch_jobs['cdd-parse'] = {
-  'injobs'         : ['cdd'],
+  'injobs'         : ['cdd','ORF-prediction'],
   'CMD_opts'       : ['db/Cog.faa','db/Cog-class','db/Cog-class-info', 'db/Kog.faa','db/Kog-class','db/Kog-class-info'],
+  'non_zero_files' : ['cog.txt','cog-class.txt','kog.txt','kog-class.txt'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 #### cog
-$ENV.NGS_root/NGS-tools/ann_parse_cdd.pl -i $INJOBS.0/cog -o $SELF/cog.txt -d $ENV.NGS_root/refs/$CMDOPTS.0
+$ENV.NGS_root/NGS-tools/ann_parse_cdd.pl -i $INJOBS.0/cog -o $SELF/cog.txt -d $ENV.NGS_root/refs/$CMDOPTS.0 -a $INJOBS.1/ORF-cov
 $ENV.NGS_root/NGS-tools/ann_parse_cdd_class.pl            -i $SELF/cog.txt -n $ENV.NGS_root/refs/$CMDOPTS.1 \\
   -d $ENV.NGS_root/refs/$CMDOPTS.2 -o $SELF/cog-class.txt
 $ENV.NGS_root/NGS-tools/ann_parse_cdd-raw.pl -i $INJOBS.0/cog -o $SELF/cog-raw.txt -d $ENV.NGS_root/refs/$CMDOPTS.0
 
 #### kog
-$ENV.NGS_root/NGS-tools/ann_parse_cdd.pl -i $INJOBS.0/cog -o $SELF/cog.txt -d $ENV.NGS_root/refs/$CMDOPTS.3
+$ENV.NGS_root/NGS-tools/ann_parse_cdd.pl -i $INJOBS.0/cog -o $SELF/cog.txt -d $ENV.NGS_root/refs/$CMDOPTS.3 -a $INJOBS.1/ORF-cov
 $ENV.NGS_root/NGS-tools/ann_parse_cdd_class.pl            -i $SELF/cog.txt -n $ENV.NGS_root/refs/$CMDOPTS.4 \\
   -d $ENV.NGS_root/refs/$CMDOPTS.5 -o $SELF/cog-class.txt
 $ENV.NGS_root/NGS-tools/ann_parse_cdd-raw.pl -i $INJOBS.0/cog -o $SELF/cog-raw.txt -d $ENV.NGS_root/refs/$CMDOPTS.3
