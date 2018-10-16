@@ -119,7 +119,6 @@ fi
 
 if [ -s taxon-superkingdom.tsv ]
 then
-  $xlsx_py -i taxon-superkingdom.tsv,taxon-phylum.tsv,taxon-class.tsv,taxon-order.tsv,taxon-family.tsv,taxon-genus.tsv,taxon-species.tsv -o taxon.xlsx
   $xlsx_py -i taxon-depth-phylum.tsv,taxon-depth-class.tsv,taxon-depth-order.tsv,taxon-depth-family.tsv,taxon-depth-genus.tsv,taxon-depth-species.tsv -o taxon-depth.xlsx
   $xlsx_py -i qc.tsv,taxon-superkingdom-whost.tsv,taxon-superkingdom.tsv,taxon-species.tsv,taxon-genus.tsv,taxon-family.tsv,taxon-order.tsv,taxon-class.tsv,taxon-phylum.tsv -o taxonomy.xlsx
 fi
