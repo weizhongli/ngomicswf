@@ -390,10 +390,10 @@ $ENV.NGS_root/NGS-tools/ann_parse_cdd_class.pl            -i $SELF/cog.txt -n $E
 $ENV.NGS_root/NGS-tools/ann_parse_cdd-raw.pl -i $INJOBS.0/cog -o $SELF/cog-raw.txt -d $ENV.NGS_root/refs/$CMDOPTS.0
 
 #### kog
-$ENV.NGS_root/NGS-tools/ann_parse_cdd.pl -i $INJOBS.0/cog -o $SELF/cog.txt -d $ENV.NGS_root/refs/$CMDOPTS.3 -a $INJOBS.1/ORF-cov
-$ENV.NGS_root/NGS-tools/ann_parse_cdd_class.pl            -i $SELF/cog.txt -n $ENV.NGS_root/refs/$CMDOPTS.4 \\
-  -d $ENV.NGS_root/refs/$CMDOPTS.5 -o $SELF/cog-class.txt
-$ENV.NGS_root/NGS-tools/ann_parse_cdd-raw.pl -i $INJOBS.0/cog -o $SELF/cog-raw.txt -d $ENV.NGS_root/refs/$CMDOPTS.3
+$ENV.NGS_root/NGS-tools/ann_parse_cdd.pl -i $INJOBS.0/kog -o $SELF/kog.txt -d $ENV.NGS_root/refs/$CMDOPTS.3 -a $INJOBS.1/ORF-cov
+$ENV.NGS_root/NGS-tools/ann_parse_cdd_class.pl            -i $SELF/kog.txt -n $ENV.NGS_root/refs/$CMDOPTS.4 \\
+  -d $ENV.NGS_root/refs/$CMDOPTS.5 -o $SELF/kog-class.txt
+$ENV.NGS_root/NGS-tools/ann_parse_cdd-raw.pl -i $INJOBS.0/kog -o $SELF/kog-raw.txt -d $ENV.NGS_root/refs/$CMDOPTS.3
 
 '''
 }
