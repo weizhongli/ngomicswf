@@ -71,7 +71,7 @@ while($ll=<TMP>) {
   $orf_ann .= $ll;
 
   my $KO = $lls[11+7]; #### if hit KO
-  $KO_hits{$KO} = 1 if ($KO =~ /^K\d+/);
+  $KO_hits{$KO} = 1 if (($KO =~ /^K\d+/) and $single_copy_KOs{$KO});
   $last_sp = $this_sp;
 } 
 close(TMP);
