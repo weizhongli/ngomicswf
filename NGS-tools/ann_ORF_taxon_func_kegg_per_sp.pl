@@ -99,9 +99,9 @@ sub run_this {
     $j = $i; 
     $j =~ s/^out.//; $j = "$output.$j"; #### $j is target output
     if (not -e $j) {
-      $cmd = `head -n 1 $i | sed "s/^/#Species\\t/" > $j`;
+      $cmd = `head -n 1 $tmp_dir/$i | sed "s/^/#Species\\t/" > $j`;
     }
-    $cmd = `grep -v "^#" $i | sed "s/^/$sp\\t/" >> $j`;
+    $cmd = `grep -v "^#" $tmp_dir/$i | sed "s/^/$sp\\t/" >> $j`;
   }
 }
 
