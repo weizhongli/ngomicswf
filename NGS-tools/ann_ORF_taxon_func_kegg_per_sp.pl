@@ -66,7 +66,7 @@ while($ll=<TMP>) {
   if (($this_sp ne $last_sp) and $orf_ann) {
     if (scalar keys %KO_hits >= $num_ref_ko_cutoff) {
       if ($last_sp =~ /\d+/) {
-        run_this($orf_ann, $last_sp);
+        run_this($orf_ann, $last_sp, $last_sp_name);
       }
       else {
         print STDERR "not valid species, $last_sp $last_sp_name";
@@ -90,7 +90,7 @@ while($ll=<TMP>) {
   if ($last_sp and $orf_ann) {
     if (scalar keys %KO_hits >= $num_ref_ko_cutoff) {
       if ($last_sp =~ /\d+/) {
-        run_this($orf_ann, $last_sp);
+        run_this($orf_ann, $last_sp, $last_sp_name);
       }
       else {
         print STDERR "not valid species, $last_sp $last_sp_name";
