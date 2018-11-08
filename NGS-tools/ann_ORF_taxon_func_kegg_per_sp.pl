@@ -73,10 +73,8 @@ while($ll=<TMP>) {
   $org_2_KO{$this_sp}{$KO} = 1 if (($KO =~ /^K\d+/) and $single_copy_KOs{$KO});
 }
 foreach $i (keys %org_2_txt) {
-  if (not ($i =~ /\d+/)) {
-    print STDERR "not valid species, $i\n";
-    next;
-  }
+  next if ($i =~ /Unknown/);
+
   my $n = scalar keys %{ $org_2_KO{$i} };
   if ($n >= $num_ref_ko_cutoff) {
     run_this($org_2_txt{$i}, $i, $col_name);
