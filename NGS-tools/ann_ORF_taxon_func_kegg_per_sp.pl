@@ -69,12 +69,12 @@ while($ll=<TMP>) {
         run_this($orf_ann, $last_sp, $last_sp_name);
       }
       else {
-        print STDERR "not valid species, $last_sp $last_sp_name";
+        print STDERR "not valid species, $last_sp $last_sp_name\n";
       }
     } 
     else {
         my $n = scalar keys %KO_hits;
-        print STDERR "not enough ref KO hits ($n) for species, $last_sp $last_sp_name";
+        print STDERR "not enough ref KO hits ($n) for species, $last_sp $last_sp_name\n";
     }
     %KO_hits = ();
     $orf_ann = "";
@@ -93,12 +93,12 @@ while($ll=<TMP>) {
         run_this($orf_ann, $last_sp, $last_sp_name);
       }
       else {
-        print STDERR "not valid species, $last_sp $last_sp_name";
+        print STDERR "not valid species, $last_sp $last_sp_name\n";
       }
     } 
     else {
         my $n = scalar keys %KO_hits;
-        print STDERR "not enough ref KO hits ($n) for species, $last_sp $last_sp_name";
+        print STDERR "not enough ref KO hits ($n) for species, $last_sp $last_sp_name\n";
     }
   }
 close(TMP);
@@ -109,7 +109,7 @@ $cmd = `rm -rf $tmp_dir`;
 sub run_this {
   my ($txt, $sp, $sp_name) = @_;
   my ($i, $j, $k, $ll, $cmd);
-  $sp_name =~ s/\W/_/g;
+  $sp_name =~ s/[^\w| ]/_/g;
 
   open(OUT, "> $tmp_dir/in.txt") || die "can not write to $tmp_dir/in.txt";
   print OUT $txt;
