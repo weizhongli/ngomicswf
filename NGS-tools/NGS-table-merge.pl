@@ -19,13 +19,14 @@ my $script_dir = $0;
 
 use Getopt::Std;
 
-getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:p:",\%opts);
+getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:p:j:",\%opts);
 die usage() unless (defined($opts{i}) and $opts{s} and $opts{o} and $opts{f});
 
 my $sample_file         = $opts{s}; #### NGS-samples
 my $file                = $opts{f}; #### file name eg blast-kegg-parse-bin/pathway.txt
 my $id_col              = $opts{i}; #### 0-based column for ID, default 0;
    $id_col              = 0  unless (defined $id_col);
+my $id_colj             = $opts{j}; #### 0-based column for 2ndary id, defualt NONE
 my $ann_cols            = $opts{a}; #### 0-based columns for annotations delimited by ",", defaults none
 my $value_col           = $opts{v}; #### 0-based value column, default -1
    $value_col           = -1 unless (defined $value_col);
@@ -67,12 +68,16 @@ if (1) {
     if (not @ann_names) {
       @ann_names = map {$lls[$_]} @ann_cols;
     }
-    if (not defined($id_name))    {$id_name    = $lls[$id_col];}
+    if (not defined($id_name))    {
+      $id_name    = $lls[$id_col];
+      $id_name .= ",$lls[$id_colj]" if ($id_colj);
+    }
 
     while($ll=<TMP>){
       chop($ll);
       @lls = split(/\t/,$ll);
       $id = $lls[$id_col];
+      $id.= ",$lls[$id_colj]" if ($id_colj);
       $value = $lls[$value_col];
       next unless ($value >= $cutoff);
 
@@ -161,10 +166,11 @@ sub usage {
 <<EOD
 this script merge txt files for mulitple samples into larger spreadsheet
 options:
-    -i sample_file, e.g. NGS-smaples
+    -s sample_file, e.g. NGS-smaples
     -o output 
     -f file  em_fast/Bacteria-toprank-abundance.txt
     -i 0-based column for ID, default 0;
+    -j 0-based column for secondary ID, default NONE
     -a 0-based columns for annotations delimited by ",", defaults none
     -v 0-based value column, default -1
     -c cutoff values delimited by ","
