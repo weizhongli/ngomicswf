@@ -54,9 +54,9 @@ if (1) {
   }
 
   foreach $sample (@samples) {
-    $cmd = `cut -f $col_str | grep -v "^#" | sed "s/^/$sample\t/" >> $output_dic`;
+    $cmd = `cut -f $col_str $sample/$file | grep -v "^#" | sed "s/^/$sample\t/" >> $output_dic`;
     if ($ann_str) {
-      $cmd = `cut of $ann_str | grep -v "^#" >> $output_dic_tmp`;
+      $cmd = `cut of $ann_str $sample/$file | grep -v "^#" >> $output_dic_tmp`;
     }
   }
   if ($ann_str) {
