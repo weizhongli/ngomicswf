@@ -48,21 +48,15 @@ close(TMP);
 
 if (1) {
   my $sample_1st = $samples[0];
-  $cmd = `grep "^#" $sample_1st/$file | cut -f $col_str | sed "s/^/sample_id\t/" > $output`;
-  if ($ann_str) {
-    $cmd = `grep "^#" $sample_1st/$file | cut -f $ann_str > $output_dic`;
-  }
+  $cmd = `grep "^#"  $sample_1st/$file | cut -f $col_str | sed "s/^/sample_id\\t/" > $output`;
+  $cmd = `grep "^#"  $sample_1st/$file | cut -f $ann_str > $output_dic` if ($ann_str);
 
   foreach $sample (@samples) {
-    $cmd = `cut -f $col_str $sample/$file | grep -v "^#" | sed "s/^/$sample\t/" >> $output_dic`;
-    if ($ann_str) {
-      $cmd = `cut of $ann_str $sample/$file | grep -v "^#" >> $output_dic_tmp`;
-    }
+    $cmd = `grep -v "^#" $sample/$file | cut -f $col_str | sed "s/^/$sample\\t/" >> $output`;
+    $cmd = `grep -v "^#" $sample/$file | cut -f $ann_str >> $output_dic_tmp` if ($ann_str);
   }
-  if ($ann_str) {
-    $cmd = `sort  $output_dic_tmp | uniq >> $output_dic`;
-    $cmd = `rm -f $output_dic_tmp`;
-  }
+  $cmd = `sort  $output_dic_tmp | uniq >> $output_dic` if ($ann_str);
+  $cmd = `rm -f $output_dic_tmp` if ($ann_str);
 
 }
 
