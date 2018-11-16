@@ -8,6 +8,7 @@ Software originally developed since 2010 by Weizhong Li at UCSD
 https://github.com/weizhongli/ngomicswf       liwz@sdsc.edu
 ==============================================================================
 
+User's guide at https://github.com/weizhongli/ngomicswf/wiki 
 
 NG-Omics-WF is a workflow tool to automatically run a bioinformatic pipeline
 for multiple datasets under generic Linux computer or Linux cluster environment.
