@@ -1,0 +1,34 @@
+
+This example is a simple 5-step workflow
+
+                   ----> Job_C ---
+                  /               \
+    Job_A -> Job_B                 ---> Job_E
+                  \               /
+                   ----> Job_D ---
+
+where Job B depends on A, job C and D depend on B, and Job E depends on C and D.
+
+
+We will run this workflow on 3 samples (Sample_A, Sample_B and Sample_C)
+
+1) set up a working directory, run the following commands:
+
+mkdir example_dir
+cd example_dir
+echo -e 'Sample_A\tparameterA\nSample_B\tparameterB\nSample_C\tparameterC' > NGS-samples
+
+new a new file named NGS-samples is generated as:
+Sample_A	parameterA
+Sample_B	parameterB
+Sample_C	parameterC
+
+
+2) copy First-example.py to your working directory, run command:
+cp Path_to_ngomics-wf/workflow-examples/First-example.py .
+
+
+3) check and modify First-example.py with your text editor
+
+3) run the workflow with
+Path_to_ngomics-wf/NG-Omics-WF.py -i First-example.py -s NGS-samples
