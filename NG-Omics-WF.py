@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # =============================== NG-Omics-WF ==================================
 #  _   _  _____         ____            _              __          ________ 
 # | \ | |/ ____|       / __ \          (_)             \ \        / /  ____|
@@ -54,6 +54,7 @@ subset_jobs = []
 qstat_xml_data = collections.defaultdict(dict)
 job_list = collections.defaultdict(dict)  # as job_list[$t_job_id][$t_sample_id] = {}
 execution_submitted = {}                  # number of submitted jobs (qsub) or threads (local sh)
+local_subprocess = {}
 ############## END Global variables
 
 
@@ -524,6 +525,17 @@ def print_job_status_summary(NGS_config):
   print '\n'
 
 
+########## 2018/11/17
+#### subprocess.Popen results in defunct process 
+#### communicate() with it seem to solve the problem, close the defunct process
+def local_subprocess_communicate():
+  for pid in local_subprocess.keys():
+    if os.path.exists('/proc/' + pid):
+      local_subprocess[pid].communicate()
+    else:
+      del local_subprocess[pid]
+
+
 def run_workflow(NGS_config):
   '''major loop for workflow run'''
   queue_system = NGS_config.queue_system   #### default "SGE"
@@ -547,6 +559,9 @@ def run_workflow(NGS_config):
 
     if flag_qstat_xml_call:
       SGE_qstat_xml_query()
+
+    ########## 2018/11/17
+    local_subprocess_communicate()
 
     ########## check and update job status for submitted jobs
     for t_job_id in NGS_config.NGS_batch_jobs.keys():
@@ -622,8 +637,15 @@ def run_workflow(NGS_config):
         #### now submitting 
         pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
         for i in range(0, t_job['no_parallel']):
-          p = subprocess.Popen(['/bin/bash', t_sample_job['sh_file']], shell=True)
+          err_f = t_sample_job['sh_file'] + '.' + str(i) + '.err'
+          #p = subprocess.Popen(['/bin/bash', t_sample_job['sh_file']], shell=True)
+          #p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >/dev/null 2>&1 &' ], shell=True, close_fds=True)
+          #p = subprocess.Popen([t_sample_job['sh_file'] , ' >/dev/null 2>&1 &' ], shell=True, executable='/bin/bash')
+          p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >' + err_f + ' 2>&1' ], shell=True, \
+             executable='/bin/bash', stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
+
           pid_file.write(str(p.pid)+'\n')
+          local_subprocess[ str(p.pid) ] = p
         pid_file.close()
         t_sample_job['status'] = 'submitted'
         print '{0},{1}: change status to submitted\n'.format(t_job_id, t_sample_id)
