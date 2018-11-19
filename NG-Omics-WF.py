@@ -452,6 +452,12 @@ def task_delete_jobs(NGS_config, opt):
       tsh.write('\\rm -rf {0}/{1}\n'.format(t_sample_id, t_job_id))
       tsh.write('\\rm '+ t_sh_pid + '\n')
 
+      t_job = NGS_config.NGS_batch_jobs[t_job_id]
+      t_execution = NGS_config.NGS_executions[ t_job['execution']]
+      kill_cmd = 'qdel '
+      if (t_execution['type'] == 'sh'):
+        kill_cmd = 'kill '
+
       #### find the qsub ids to be deleted 
       pids = [] #### either pids, or qsub ids
       try:
@@ -461,7 +467,7 @@ def task_delete_jobs(NGS_config, opt):
         pids = [x.strip() for x in pids]
       except IOError:
         fatal_error('cannot open ' + t_sh_pid, exit_code=1)
-      tsh.write('qdel ' + ' '.join([str(x) for x in pids]) + '\n')
+      tsh.write(kill_cmd + ' '.join([str(x) for x in pids]) + '\n')
 
     tsh.write('\n\n')
   tsh.close()

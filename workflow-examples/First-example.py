@@ -7,7 +7,7 @@ queue_system = 'SGE'
 
 ########## local variables etc. Please edit
 ENV={
-  'NGS_root' : '/home/oasis/gordon-data/NGS-ann-project-new',
+  'NGS_root' : '/home/myhome/bin',
 }
 
 ########## computation resources for execution of jobs
@@ -50,68 +50,63 @@ NGS_batch_jobs['Job_A'] = {
   'no_parallel'      : 1,                    # number of total jobs to run using command below
   'command'          : '''
 
-echo "Sample $SAMPLE" > $SELF/output_Job_A done
-for i in `seq 1 $CMDOPTS.0`; do echo "$SAMPLE line $i" >> $SELF/output_Job_A; done
-sleep 5
+touch $SELF/output_Job_A
+for i in `seq 1 $CMDOPTS.0`; do echo "$SAMPLE $DATA.0 line $i $SELF" >> $SELF/output_Job_A; done
 
 '''
 }
 
 NGS_batch_jobs['Job_B'] = {
-  'injobs'         : ['Job_A'],          # start with high quality reads
-  'CMD_opts'         : ['5', '8'],
-  'non_zero_files' : ['output_Job_B'],
+  'injobs'         : ['Job_A'],
+  'CMD_opts'         : ['thread_1', 'thread_2'],
+  'non_zero_files' : ['output_Job_B1',"output_Job_B2"],
   'execution'        : 'sh_1',               # where to execute
   'cores_per_cmd'    : 2,                    # number of threads used by command below
   'no_parallel'      : 1,                    # number of total jobs to run using command below
   'command'          : '''
 
-## two threads in parallel
-echo "$SAMPLE, thread 1, sleep $CMDOPTS.0"; sleep $CMDOPTS.0 &
-echo "$SAMPLE, thread 2, sleep $CMDOPTS.1"; sleep $CMDOPTS.0 &
-wait 
+# you can have two threads in parallel
+echo "$SAMPLE, thread 1 running"; cat $INJOBS.0/output_Job_A | sed "s/$/ $SELF $CMDOPTS.0/" > $SELF/output_Job_B1 &
+echo "$SAMPLE, thread 1 running"; cat $INJOBS.0/output_Job_A | sed "s/$/ $SELF $CMDOPTS.1/" > $SELF/output_Job_B2 &
 
-cat $INJOBS.0/output_Job_A | sed "s/^/$SELF /" > $SELF/output_Job_B
+wait 
 '''
 }
 
 NGS_batch_jobs['Job_C'] = {
-  'injobs'         : ['Job_B'],          # start with high quality reads
+  'injobs'         : ['Job_B'],
   'non_zero_files' : ['output_Job_C'],
   'execution'        : 'sh_1',               # where to execute
   'cores_per_cmd'    : 1,                    # number of threads used by command below
   'no_parallel'      : 1,                    # number of total jobs to run using command below
   'command'          : '''
 
-cat $INJOBS.0/output_Job_B | sed "s/^/$SELF  /" > $SELF/output_Job_C
-sleep 5
+cat $INJOBS.0/output_Job_B* | sed "s/$/ $SELF/" > $SELF/output_Job_C
 '''
 }
 
 NGS_batch_jobs['Job_D'] = {
-  'injobs'         : ['Job_B'],          # start with high quality reads
+  'injobs'         : ['Job_B'],
   'non_zero_files' : ['output_Job_D'],
   'execution'        : 'sh_1',               # where to execute
   'cores_per_cmd'    : 1,                    # number of threads used by command below
   'no_parallel'      : 1,                    # number of total jobs to run using command below
   'command'          : '''
 
-cat $INJOBS.0/output_Job_B | sed "s/^/$SELF  /" > $SELF/output_Job_D
-sleep 5
+cat $INJOBS.0/output_Job_B* | sed "s/$/ $SELF/" > $SELF/output_Job_D
 '''
 }
 
 
 NGS_batch_jobs['Job_E'] = {
-  'injobs'         : ['Job_C','Job_D'],          # start with high quality reads
+  'injobs'         : ['Job_C','Job_D'],
   'non_zero_files' : ['output_Job_E'],
   'execution'        : 'sh_1',               # where to execute
   'cores_per_cmd'    : 1,                    # number of threads used by command below
   'no_parallel'      : 1,                    # number of total jobs to run using command below
   'command'          : '''
 
-cat $INJOBS.0/output_Job_C $INJOBS.1/output_Job_D | sed "s/^/$SELF  /" > $SELF/output_Job_E
-sleep 5
+cat $INJOBS.0/output_Job_C $INJOBS.1/output_Job_D | sed "s/$/ $SELF/" > $SELF/output_Job_E
 '''
 }
 

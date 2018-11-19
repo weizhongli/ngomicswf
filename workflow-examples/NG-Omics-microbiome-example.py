@@ -43,23 +43,15 @@ NGS_executions['sh_1'] = {
 
 NGS_batch_jobs = {}
 NGS_batch_jobs['qc'] = {
-  'CMD_opts'         : ['100','NexteraPE'],
+  'CMD_opts'         : ['100'],
   'non_zero_files' : ['R1.fa','R2.fa','qc.txt'],
   'execution'        : 'qsub_1',               # where to execute
   'cores_per_cmd'    : 4,                    # number of threads used by command below
   'no_parallel'      : 1,                    # number of total jobs to run using command below
   'command'          : '''
 
-#### Trim adapter options
-if [ "$CMDOPTS.1" = "NexteraPE" ] 
-then
-  java -jar $ENV.NGS_root/apps/Trimmomatic/trimmomatic-0.36.jar PE -threads 4 -phred33 $DATA.0 $DATA.1 $SELF/R1.fq $SELF/R1-s.fq $SELF/R2.fq $SELF/R2-s.fq \\
-      ILLUMINACLIP:$ENV.NGS_root/apps/Trimmomatic/adapters/NexteraPE-PE.fa:2:30:10 \\
-      SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:$CMDOPTS.0 MAXINFO:80:0.5 1>$SELF/qc.stdout 2>$SELF/qc.stderr
-else
-  java -jar $ENV.NGS_root/apps/Trimmomatic/trimmomatic-0.36.jar PE -threads 4 -phred33 $DATA.0 $DATA.1 $SELF/R1.fq $SELF/R1-s.fq $SELF/R2.fq $SELF/R2-s.fq \\
-      SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:$CMDOPTS.0 MAXINFO:80:0.5 1>$SELF/qc.stdout 2>$SELF/qc.stderr
-fi
+java -jar $ENV.NGS_root/apps/Trimmomatic/trimmomatic-0.36.jar PE -threads 4 -phred33 $DATA.0 $DATA.1 $SELF/R1.fq $SELF/R1-s.fq $SELF/R2.fq $SELF/R2-s.fq \\
+    SLIDINGWINDOW:4:20 LEADING:3 TRAILING:3 MINLEN:$CMDOPTS.0 MAXINFO:80:0.5 1>$SELF/qc.stdout 2>$SELF/qc.stderr
 
 perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr($_,1); $a=<>; print $a; $a=<>; $a=<>;}}' < $SELF/R1.fq > $SELF/R1.fa &
 perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr($_,1); $a=<>; print $a; $a=<>; $a=<>;}}' < $SELF/R2.fq > $SELF/R2.fa &
@@ -126,88 +118,6 @@ fi
 '''
 }
 
-#### mitochondron analysis
-#### ~100 mitochondria in a mammalian cell, and each mitochondrion has 2-10 copies of mtDNA
-NGS_batch_jobs['mito-ana'] = {
-  'injobs'         : ['qc'],          # start with high quality reads
-  'CMD_opts'       : ['mito/HS_mito'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
-  'non_zero_files' : ['mito.vcf'],
-  'execution'      : 'qsub_1',        # where to execute
-  'cores_per_cmd'  : 16,              # number of threads used by command below
-  'no_parallel'    : 1,               # number of total jobs to run using command below
-  'command'        : '''
-
-$ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.0 \\
-  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 | \\
-  $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/mito.top.bam
-
-$ENV.NGS_root/apps/bin/samtools view $SELF/mito.top.bam -F 0x004 | cut -f 1 > $SELF/mito-hit.ids
-$ENV.NGS_root/apps/bin/samtools view $SELF/mito.top.bam | \\
-  $ENV.NGS_root/NGS-tools/sam-HS-depth.pl -i - -a $ENV.NGS_root/refs/$CMDOPTS.0.ann -o $SELF/mito-depth
-
-$ENV.NGS_root/apps/bin/samtools sort $SELF/mito.top.bam -o $SELF/mito.sorted.bam
-$ENV.NGS_root/apps/bin/samtools mpileup -o $SELF/mito.mpileup -f /local/ifs2_projdata/8460/projects/WOUND/wli/refs/mito/HS_mito    $SELF/mito.sorted.bam
-$ENV.NGS_root/apps/bin/samtools mpileup -o $SELF/mito.raw.vcf -f /local/ifs2_projdata/8460/projects/WOUND/wli/refs/mito/HS_mito -v $SELF/mito.sorted.bam
-
-java -jar $ENV.NGS_root/apps/VarScan-2.4.2/VarScan.v2.4.2.jar  pileup2snp $SELF/mito.mpileup > $SELF/mito.vcf
-
-#$ENV.NGS_root/NGS-tools/fasta_fetch_by_ids.pl -i $SELF/mito-hit.ids -s $INJOBS.0/R1.fa -o $SELF/mito-R1.fa
-#$ENV.NGS_root/NGS-tools/fasta_fetch_by_ids.pl -i $SELF/mito-hit.ids -s $INJOBS.0/R2.fa -o $SELF/mito-R2.fa
-
-'''
-}
-
-NGS_batch_jobs['reads-mapping'] = {
-  'injobs'         : ['remove-host'],
-  'CMD_opts'       : ['75'],          # significant score cutoff
-  'non_zero_files' : ['ref_genome.top.bam'],
-  'execution'      : 'qsub_1',        # where to execute
-  'cores_per_cmd'  : 16,              # number of threads used by command below
-  'no_parallel'    : 1,               # number of total jobs to run using command below
-  'command'        : '''
-
-#$ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
-#  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.raw.bam
-
-$ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
-  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T $CMDOPTS.0 | \\
-  $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.top.bam
-
-
-'''
-}
-
-NGS_batch_jobs['taxonomy'] = {
-  'injobs'         : ['remove-host','reads-mapping'],
-  'execution'      : 'qsub_1',        # where to execute
-  'cores_per_cmd'  : 8,              # number of threads used by command below
-  'no_parallel'    : 1,               # number of total jobs to run using command below
-  'command'        : '''
-
-# Add additional BAM filtering steps below
-
-# count total number of input reads
-NUM_reads=$(grep -c "^>" $INJOBS.0/non-host-R1.fa)
-
-$ENV.NGS_root/apps/bin/samtools view $INJOBS.1/ref_genome.top.bam | \\
-  $ENV.NGS_root/NGS-tools/sam-to-taxon-abs-ez.pl -a $ENV.NGS_root/refs/ref-genomes/ref_genome_full.ann -t $ENV.NGS_root/refs/ref-genomes/ref_genome_taxon.txt \\
-  -o $SELF/taxon -c 1e-7 -N $NUM_reads
-
-# number of host reads
-NUM_HOST=0
-if [ -s $INJOBS.0/host-hit.ids ]
-then
-  NUM_HOST=$(grep -c "." $INJOBS.0/host-hit.ids)
-else
-  NUM_HOST=0
-fi
-
-cp -p $SELF/taxon.superkingdom.txt $SELF/taxon.superkingdom-whost.txt
-echo -e "Host\\tHost\\t$NUM_HOST" >> $SELF/taxon.superkingdom-whost.txt
-
-'''
-}
-
 
 NGS_batch_jobs['assembly'] = {
   'injobs'         : ['remove-host'],
@@ -242,11 +152,8 @@ $ENV.NGS_root/NGS-tools/fasta_filter_short_seq.pl -i $SELF/assembly/scaffold.fa 
 mv -f $SELF/assembly/scaffold-new.fa $SELF/assembly/scaffold.fa
 
 ## depth of coverage
-
 perl -e 'while(<>){ if ($_ =~ /^>(\S+)/) { $id=$1;  if ($_ =~ /_cov_([\d\.]+)/) { print "$id\\t$1\\n";} } }' < $SELF/assembly/scaffold.fa > $SELF/assembly/scaffold-cov
 
-## $NGS_bin_dir/bwa index -a bwtsw -p $SELF/scaffold $SELF/scaffold.fa
-## insert coverage 
 '''
 }
 
@@ -275,37 +182,6 @@ $ENV.NGS_root/NGS-tools/fasta_filter_short_seq.pl -i $SELF/ORF.faa -c $CMDOPTS.1
 mv  $SELF/ORF-new.faa $SELF/ORF.faa
 
 $ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $SELF/ORF.faa -d $INJOBS.0/assembly/scaffold-cov -o $SELF/ORF-cov
-'''
-}
-
-
-NGS_batch_jobs['assembly-binning'] = {
-  'injobs'         : ['assembly','remove-host','reads-mapping','ORF-prediction'],
-  'CMD_opts'       : ['75','ref-genomes/ref_genome_taxon.txt'],     # alignment cutoff score for both R1 and R2
-  'non_zero_files' : ['assembly-bin'],
-  'execution'      : 'qsub_1',        # where to execute
-  'cores_per_cmd'  : 16,              # number of threads used by command below
-  'no_parallel'    : 1,               # number of total jobs to run using command below
-  'command'        : '''
-
-$ENV.NGS_root/apps/bin/bwa index -a bwtsw -p $SELF/assembly $INJOBS.0/assembly/scaffold.fa
-
-$ENV.NGS_root/apps/bin/bwa mem -t 16 $SELF/assembly $INJOBS.1/non-host-R1.fa $INJOBS.1/non-host-R2.fa | \\
-  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/assembly-mapping.sam
-$ENV.NGS_root/NGS-tools/sam-to-seq-depth-cov.pl -s $INJOBS.0/assembly/scaffold.fa -o $SELF/scaffold-cov < $SELF/assembly-mapping.sam
-
-$ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome.top.bam | \\
-  $ENV.NGS_root/NGS-tools/sam-filter-top-pair.pl -T $CMDOPTS.0  > $SELF/ref-mapping.sam 
-
-$ENV.NGS_root/NGS-tools/assembly-binning-taxon.pl -i $SELF/assembly-mapping.sam -j  $SELF/ref-mapping.sam -o $SELF/assembly-bin \\
-  -s $INJOBS.0/assembly/scaffold.fa -c 0.5 -n 10 -a taxid -t $ENV.NGS_root/refs/$CMDOPTS.1
-
-$ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $INJOBS.3/ORF.faa -d $SELF/scaffold-cov -o $SELF/ORF-cov
-
-rm -f $SELF/assembly.amb  $SELF/assembly.ann $SELF/assembly.bwt $SELF/assembly.pac $SELF/assembly.sa
-rm -f $SELF/assembly-mapping.sam
-rm -f $SELF/ref-mapping.sam
-
 '''
 }
 
