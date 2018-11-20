@@ -9,6 +9,8 @@ queue_system = 'SGE'
 ENV={
   'NGS_root' : '/home/oasis/gordon-data/NGS-ann-project-new',
 }
+# this dir should contains ngomicswf, NGS-tools (sybmlic link to ngomicswf/NGS-tools), apps, refs etc
+########## END local variables etc
 
 ########## computation resources for execution of jobs
 NGS_executions = {}
@@ -18,8 +20,6 @@ NGS_executions['qsub_1'] = {
   'qsub_exe'            : 'qsub',
   'cores_per_node'      : 32,
   'number_nodes'        : 64,
-  'user'                : 'weizhong', #### I will use command such as qstat -u weizhong to query submitted jobs
-  'command'             : 'qsub',
   'command_name_opt'    : '-N',
   'command_err_opt'     : '-e',
   'command_out_opt'     : '-o',
@@ -93,18 +93,6 @@ then
   $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
   $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
   
-elif [ "$CMDOPTS.0" = "bowtie2" ]
-then
-  #### bowtie2 is not actively used
-  $ENV.NGS_root/apps/bin/bowtie -f -k 1 -v 2 -p 16 $ENV.NGS_root/refs/host $INJOBS.0/R1.fa $SELF/host-hit-1 &
-  $ENV.NGS_root/apps/bin/bowtie -f -k 1 -v 2 -p 16 $ENV.NGS_root/refs/host $INJOBS.0/R2.fa $SELF/host-hit-2 &
-  wait
-  cut -f 1 $SELF/host-hit-1 > $SELF/host-hit-R1.ids
-  cut -f 1 $SELF/host-hit-2 > $SELF/host-hit-R2.ids
-  rm -f $SELF/host-hit-R1.ids $SELF/host-hit-R2.ids
-  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
-  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
-
 elif [ "$CMDOPTS.0" = "skip" ]
 then
   #### do nothing, simply link 

@@ -1,0 +1,345 @@
+
+This example is a simple workflow for metagenomic data analysis
+The input are paired end FASTQ files from Illumina platforms, It performs:
+
+  QC:             trim and filtering the raw reads
+  Filter-host:    filter out the reads from host. For human microbiome, it will
+                  align the reads to human genome and remove the reads that are 
+                  mapped to human genome
+  Assembly:       assembly the non-host reads to scaffolds
+  ORF prediction: predict ORFs from the scaffolds
+  Pfam:           query the ORFs against Pfam database using hmmer3
+  Pfam-parse:     parse pfam results
+  CDD:            query the ORFs against COG and KOG database using rps-blast
+  CDD-parse:      parse CDD results
+
+
+====================================================
+Prepare a directory for apps, references and scritps
+====================================================
+All the files are included in folder, e.g. some_path/NGS-ann-project, please make a 
+directory structure like:
+
+./NGS-ann-project/ngomicswf
+                 |
+                 -/bin/some_binary_files
+                 |
+                 -/apps/blast+
+                 |     /cd-hit
+                 |     /bwa
+                 |     /samtools
+                 |     /trimommatic
+                 |     /other_apps
+                 |
+                 -/refs/db
+                 |     /db/Cog*
+                 |     /db/Kog*
+                 |     /db/Prk*
+                 |     /db/Pfam*
+                 |     /host
+                 |     /other_ref_dbs
+
+Within ./NGS-ann-project, you can download the ngsomicswf by
+  
+  git clone git@github.com:weizhongli/ngomicswf.git
+  ln -s ngomicswf/NGS-tools .
+
+
+=============================
+Download third party programs
+=============================
+We need several third party programs in the workflow, please download and install the followings
+at ./NGS-ann-project/apps
+
+  NCBI sratoolkit: https://www.ncbi.nlm.nih.gov/sra/docs/toolkitsoft/ 
+  NCBI blast+:     ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/
+  Hmmer3:          http://hmmer.org/download.html
+  Trimmomatic:     http://www.usadellab.org/cms/?page=trimmomatic
+  cd-hit:          https://github.com/weizhongli/cdhit
+  bwa:             https://github.com/lh3/bwa
+  samtools:        http://www.htslib.org/, http://www.htslib.org/download/
+  metaSPAdes:      http://cab.spbu.ru/software/spades/
+  prodigal:        https://github.com/hyattpd/prodigal/releases/
+
+
+======================
+Download reference DBs
+======================
+Please download databases and save them at ./NGS-ann-project/refs
+  1) mkdir directories
+    cd ./NGS-ann-project
+    mkdir -p refs/db refs/host
+
+  2) download and prepare CDD databases: COG / KOG / PRK
+    cd ./NGS-ann-project/refs/db
+    wget ftp://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/Cog_LE.tar.gz
+    wget ftp://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/Kog_LE.tar.gz
+    wget ftp://ftp.ncbi.nih.gov/pub/mmdb/cdd/little_endian/Prk_LE.tar.gz
+    wget ftp://ftp.ncbi.nlm.nih.gov/pub/COG/COG/fun.txt; mv fun.txt Cog-class
+    wget ftp://ftp.ncbi.nlm.nih.gov/pub/COG/COG/whog;    mv whog Cog-class-info
+    wget ftp://ftp.ncbi.nlm.nih.gov/pub/COG/KOG/fun.txt; mv fun.txt Kog-class
+    wget ftp://ftp.ncbi.nlm.nih.gov/pub/COG/KOG/kog;     mv kog Kog-class-info
+    
+    #### unpack these databases
+    tar xvf Cog_LE.tar.gz
+    tar xvf Kog_LE.tar.gz
+    tar xvf Prk_LE.tar.gz
+    
+    #### dump out the FASTA files, this need blastdbcmd, a program from blast+ package
+    #### blastdbcmd is a program from blast_+
+    blastdbcmd -db Cog -outfmt %f -entry all > Cog.faa
+    blastdbcmd -db Kog -outfmt %f -entry all > Kog.faa
+    blastdbcmd -db Prk -outfmt %f -entry all > Prk.faa
+
+    #### download some additional files
+    wget ftp://ftp.ncbi.nih.gov/pub/COG/COG2014/data/cognames2003-2014.tab
+    wget ftp://ftp.ncbi.nih.gov/pub/COG/COG2014/data/fun2003-2014.tab
+    wget ftp://ftp.ncbi.nih.gov/pub/COG/KOG/fun.txt
+
+  3) download and prepare Pfam database
+    cd ./NGS-ann-project/refs/db
+    wget ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
+    gunzip Pfam-A.hmm.gz
+
+    #### format pfam HMMs
+    #### hmmpress is a program from hmmer3
+    hmmpress Pfam-A.hmm
+
+  4) download and prepare human genome
+    cd ./NGS-ann-project/refs/host
+
+    #### option 1, from ensembl
+    wget ftp://ftp.ensembl.org/pub/current_fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    gunzip Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    ln -s Homo_sapiens.GRCh38.dna.primary_assembly.fa GRCh38.fa
+    bwa index -a bwtsw GRCh38.fa
+
+    #### option 2, from NCBI
+    wget ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/special_requests/GRCh38_top_level.fa.gz
+    gunzip GRCh38_top_level.fa.gz
+    ln -s GRCh38_top_level.fa GRCh38.fa
+    bwa index -a bwtsw GRCh38.fa
+
+
+=============================
+Prepare test metagenomic data 
+=============================
+Here we use two Mock microbiome samples: Mock_balanced and Mock_staggered.
+They are community of microbes comprised of 20 different species with known, diverse
+reference genomes provided by BEI. Mock_balanced is composed of genomes at
+equal abundance and Mock_staggered is made of genomes at different relative
+abundance.
+
+We will first download the Fastq files from NCBI SRA under thses two accession numbers
+  SRR2726606 Mock_balanced
+  SRR5275893 Mock_staggered
+
+  1) set up a working directory, run the following commands:
+    mkdir example_dir
+    cd example_dir
+    echo -e 'Mock_balanced\tR1.fq.gz\tR1.fq.gz\nMock_staggered\tR1.fq.gz\tR2.fq.gz' > NGS-samples
+
+  Now a new file NGS-samples generated:
+    Mock_balanced 	R1.fq.gz	R1.fq.gz
+    Mock_staggered	R1.fq.gz	R2.fq.gz
+
+  2) download FASTQ files
+    path_to_sratoolkit/bin/fastq-dump --accession SRR5275893 --split-files --gzip
+    path_to_sratoolkit/bin/fastq-dump --accession SRR2726606 --split-files --gzip
+
+  Now, you have:
+    SRR2726606_1.fastq.gz
+    SRR2726606_2.fastq.gz
+    SRR5275893_1.fastq.gz
+    SRR5275893_2.fastq.gz
+
+  3) move files and create symoblic link
+    mkdir Mock_balanced Mock_staggered
+    mv SRR2726606_1.fastq.gz SRR2726606_2.fastq.gz Mock_balanced
+    mv SRR5275893_1.fastq.gz SRR5275893_2.fastq.gz Mock_staggered
+    ln -s SRR2726606_1.fastq.gz Mock_balanced/R1.fq.gz
+    ln -s SRR2726606_2.fastq.gz Mock_balanced/R2.fq.gz
+    ln -s SRR5275893_1.fastq.gz Mock_staggered/R1.fq.gz
+    ln -s SRR5275893_2.fastq.gz Mock_staggered/R2.fq.gz
+
+  Now, you have:
+    Mock_balanced/R1.fq.gz -> SRR2726606_1.fastq.gz
+    Mock_balanced/R2.fq.gz -> SRR2726606_2.fastq.gz
+    Mock_balanced/SRR2726606_1.fastq.gz
+    Mock_balanced/SRR2726606_2.fastq.gz
+    Mock_staggered/R1.fq.gz -> SRR5275893_1.fastq.gz
+    Mock_staggered/R2.fq.gz -> SRR5275893_2.fastq.gz
+    Mock_staggered/SRR5275893_1.fastq.gz
+    Mock_staggered/SRR5275893_2.fastq.gz
+
+====================================
+Run the workflow on a local computer
+====================================
+You will need a relatively powerful computer to run the workflow, a multiple core (e.g. 16 or more)
+large-RAM (e.g. 64GB or more) computer maybe needed.
+
+  1) copy and edit NG-Omics-microbiome-example.py
+    cd example_dir
+    cp path_to_ngomics-wf/NG-Omics-microbiome-example.py .
+
+  2) edit NG-Omics-microbiome-example.py
+    #### edit the block below to point to the NGS-ann-project direcotry on your system
+    
+ENV={
+  'NGS_root' : '/home/oasis/gordon-data/NGS-ann-project-new',
+}
+
+    #### edit the block below to only change the cores_per_node,
+    #### this is the number of cores of your local computer
+NGS_executions['sh_1'] = {
+  'type'                : 'sh',
+  'cores_per_node'      : 8,
+  'number_nodes'        : 1,
+  'template'            : '''#!/bin/bash
+
+'''
+}
+
+    #### within each job block, edit 'execution' element, repleace qsub_1 to sh_1
+    from:
+       'execution'        : 'qsub_1',
+    to 
+       'execution'        : 'sh_1',
+
+
+    #### check the path within each job block for third party programs, e.g.
+      within qc: $ENV.NGS_root/apps/Trimmomatic/trimmomatic-0.36.jar
+      within remove-host: $ENV.NGS_root/apps/bin/bwa
+    #### Here $ENV.NGS_root is the NGS-ann-project directory on your system
+    #### for safety, you can always use absolute path
+    #### you need to confirm all the paths, or program name
+
+  3) write out the job scripts and double check path 
+    path_to_ngomics-wf/NG-Omics-WF.py -i NG-Omics-microbiome-example.py -s NGS-samples -J write-sh
+
+    This will generate sh scripts for each job and for each sample, you can check each sh script
+    within WF-sh directory and confirm that the path to programs, databases are correct,
+    other wise
+      a. delete all WF-sh/*.sh
+      b. re-edit the NG-Omics-microbiome-example.py
+      c. re-run path_to_ngomics-wf/NG-Omics-WF.py -i NG-Omics-microbiome-example.py -s NGS-samples -J write-sh
+      d. re-check
+
+   4) run the workflow with
+     nohup path_to_ngomics-wf/NG-Omics-WF.py -i NG-Omics-microbiome-example.py -s NGS-samples &
+
+     Hopefully, it will complete all the annotations.
+
+
+======================================
+Run the workflow on a computer cluster
+======================================
+If you have a computer cluster with Open Grid Engine (OGE) or other queue systems
+where you can use command qsub to submit a job and use qstat to query job status, 
+most likely you can run the workflow on this cluster.
+
+Another requirement is the NGS-ann-project directory and the working directory (example_dir)
+must be available from all the compute nodes.
+
+  1) copy and edit NG-Omics-microbiome-example.py
+    cd example_dir
+    cp path_to_ngomics-wf/NG-Omics-microbiome-example.py .
+
+  2) edit NG-Omics-microbiome-example.py
+    #### edit the block below to point to the NGS-ann-project direcotry on your system
+
+ENV={
+  'NGS_root' : '/home/oasis/gordon-data/NGS-ann-project-new',
+}
+
+    #### edit this block below according to your queue system
+    #### pe_para:        depends on your cluster, this is the parameter to submit job to use multiple cores of a compute node
+    #### cores_per_node: this is the number of cores of compute node of this queue
+    #### number_nodes:   if your cluster limit how many jobs you can submit, make this smaller
+    #### #$ -q RNA.q:    give the queue name
+NGS_executions['qsub_1'] = {
+  'type'                : 'qsub-pe',
+  'pe_para'             : '-pe orte', 
+  'qsub_exe'            : 'qsub',
+  'cores_per_node'      : 32,
+  'number_nodes'        : 64,
+  'command_name_opt'    : '-N',
+  'command_err_opt'     : '-e',
+  'command_out_opt'     : '-o',
+  'template'            : '''#!/bin/bash
+#$ -q RNA.q
+#$ -v PATH
+#$ -V
+
+'''
+}
+
+    #### you can have multiple queues for different type of jobs, 
+    #### you can make another block. e.g.
+NGS_executions['qsub_2'] = {
+  'type'                : 'qsub-pe',
+  'pe_para'             : '-pe orte', 
+  'qsub_exe'            : 'qsub',
+  'cores_per_node'      : 32,
+  'number_nodes'        : 64,
+  'command_name_opt'    : '-N',
+  'command_err_opt'     : '-e',
+  'command_out_opt'     : '-o',
+  'template'            : '''#!/bin/bash
+#$ -q second_queue.q
+#$ -v PATH
+#$ -V 
+
+'''
+}
+
+    #### within each job block, keep 'execution' element, to be 'qsub_1'
+
+
+    #### check the path within each job block for third party programs, e.g.
+      within qc: $ENV.NGS_root/apps/Trimmomatic/trimmomatic-0.36.jar
+      within remove-host: $ENV.NGS_root/apps/bin/bwa
+    #### Here $ENV.NGS_root is the NGS-ann-project directory on your system
+    #### for safety, you can always use absolute path
+    #### you need to confirm all the paths, or program name
+
+  3) write out the job scripts and double check path etc
+    path_to_ngomics-wf/NG-Omics-WF.py -i NG-Omics-microbiome-example.py -s NGS-samples -J write-sh
+
+    This will generate sh scripts for each job and for each sample, you can check each sh script
+    within WF-sh directory and confirm that the path to programs, databases are correct,
+    other wise
+      a. delete all WF-sh/*.sh
+      b. re-edit the NG-Omics-microbiome-example.py
+      c. re-run path_to_ngomics-wf/NG-Omics-WF.py -i NG-Omics-microbiome-example.py -s NGS-samples -J write-sh
+      d. re-check
+
+   4) check whether you can submit the sh script
+      check WF-sh/qc.Mock_balanced.sh to see if the queue parameters are good, if not you may
+      need to re-edit NG-Omics-microbiome-example.py
+
+      you can test by manully submit this script
+        qsub WF-sh/qc.Mock_balanced.sh
+      this will run the qc job for Mock_balanced, and will create results in Mock_balanced/qc
+
+   5) run the workflow with
+     nohup path_to_ngomics-wf/NG-Omics-WF.py -i NG-Omics-microbiome-example.py -s NGS-samples &
+
+     Hopefully, it will complete all the annotations.
+
+
+===============
+Get the results
+===============
+After finishing the workflow, you will have the results in seperate folder
+for each job for each sample. The filenames are mostly self explanatory.
+
+
+
+
+=======
+contact 
+=======
+Weizhong Li, wli@jcvi.org
+
+
