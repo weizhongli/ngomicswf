@@ -61,6 +61,9 @@ at ./NGS-ann-project/apps
   metaSPAdes:      http://cab.spbu.ru/software/spades/
   prodigal:        https://github.com/hyattpd/prodigal/releases/
 
+You can copy the executables from each package to ./NGS-ann-project/bin directory.
+If you don't, you will need specify the path to each programs when you edit the workflow
+template file. Either way is fine.
 
 ======================
 Download reference DBs
@@ -68,7 +71,7 @@ Download reference DBs
 Please download databases and save them at ./NGS-ann-project/refs
   1) mkdir directories
     cd ./NGS-ann-project
-    mkdir -p refs/db refs/host
+    mkdir -p refs/db refs/host refs/pfam
 
   2) download and prepare CDD databases: COG / KOG / PRK
     cd ./NGS-ann-project/refs/db
@@ -97,7 +100,7 @@ Please download databases and save them at ./NGS-ann-project/refs
     wget ftp://ftp.ncbi.nih.gov/pub/COG/KOG/fun.txt
 
   3) download and prepare Pfam database
-    cd ./NGS-ann-project/refs/db
+    cd ./NGS-ann-project/refs/pfam
     wget ftp://ftp.ebi.ac.uk/pub/databases/Pfam/current_release/Pfam-A.hmm.gz
     gunzip Pfam-A.hmm.gz
 
@@ -147,6 +150,7 @@ We will first download the Fastq files from NCBI SRA under thses two accession n
     path_to_sratoolkit/bin/fastq-dump --accession SRR5275893 --split-files --gzip
     path_to_sratoolkit/bin/fastq-dump --accession SRR2726606 --split-files --gzip
 
+  This may take sometime, depends on the network
   Now, you have:
     SRR2726606_1.fastq.gz
     SRR2726606_2.fastq.gz
@@ -238,6 +242,9 @@ If you have a computer cluster with Open Grid Engine (OGE) or other queue system
 where you can use command qsub to submit a job and use qstat to query job status, 
 most likely you can run the workflow on this cluster.
 
+At least I know that PBS queue system also uses qsub and qstat and similar parameters,
+so PBS should be fine.
+
 Another requirement is the NGS-ann-project directory and the working directory (example_dir)
 must be available from all the compute nodes.
 
@@ -257,6 +264,8 @@ ENV={
     #### cores_per_node: this is the number of cores of compute node of this queue
     #### number_nodes:   if your cluster limit how many jobs you can submit, make this smaller
     #### #$ -q RNA.q:    give the queue name
+    #### you can add any particular parameters below
+    #### PBS users:      you may use #PBS to start #PBS parameters
 NGS_executions['qsub_1'] = {
   'type'                : 'qsub-pe',
   'pe_para'             : '-pe orte', 
