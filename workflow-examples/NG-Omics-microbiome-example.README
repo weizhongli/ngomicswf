@@ -343,7 +343,13 @@ Get the results
 After finishing the workflow, you will have the results in seperate folder
 for each job for each sample. The filenames are mostly self explanatory.
 
+You can also run 
 
+  path_to_ngomics-wf/workflow-examples/NG-Omics-microbiome-example-report-xlsx.sh NGS-samples output_dir
+
+
+NG-Omics-microbiome-example-report-xlsx.sh will merge the results from all samples 
+into tsv files and put them together into a xlsx file.
 
 
 =======
