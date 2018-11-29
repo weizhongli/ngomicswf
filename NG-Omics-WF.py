@@ -822,7 +822,12 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(formatter_class = RawTextHelpFormatter,
                                    description     = textwrap.dedent(banner))
 
-  parser.add_argument('-i', '--input',       help="workflow configration file, required", required=True)
+  parser.add_argument('-i', '--input',       required=True, help='''
+workflow configration file, required
+You can input multiple configration files, e.g.
+-i config_file1,config_file2
+   config_file2 may have additional jobs, beyond the jobs defined in config_file1
+  ''')
   parser.add_argument('-s', '--sample_file', help='''
 sample data file, required unless -S is present
 File format example:
@@ -868,7 +873,10 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
 
   if (args.sample_file is None) and (args.sample_name is None) :
     parser.error('No sample file or sample name')
-  NGS_config = imp.load_source('NGS_config', args.input)
+
+  ## possible read in mulitple files
+  for line in re.split(',', args.input):
+    NGS_config = imp.load_source('NGS_config', line)
 
   print banner
   read_samples(args)
