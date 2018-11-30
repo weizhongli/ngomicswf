@@ -20,7 +20,7 @@ require "$script_dir/ann_local.pl";
 # these .keg file are from KEGG database /kegg/kegg-brite/ko/
 
 use Getopt::Std;
-getopts("i:k:a:o:e:d:s:t:r:",\%opts);
+getopts("i:k:a:o:e:d:s:t:r:c:",\%opts);
 die usage() unless ($opts{i} and $opts{k} and $opts{o});
 
 my $ORF_ann_file = $opts{i}; #### blast alignment file in m8 format
@@ -28,6 +28,10 @@ my $keg_file     = $opts{k}; #### e.g. ko00001.keg  ko00002.keg  ko01000.keg  ko
 my $output       = $opts{o}; #### output prefix kegg abundance file
 my $ORF_depth    = $opts{d}; #### ORF depth
 my $ref_KOs      = $opts{r}; #### single-copy house keeping gene
+my $ann_cols     = $opts{c}; $ann_cols = "17,18,12" unless($ann_cols);
+
+my ($fr_col, $KO_col, $orf_col) = split(/,/, $ann_cols);
+die "undefined ann columns" unless ( ($fr_col>=0) and ($KO_col>=0) and ($orf_col>=0)) ;
 
 my ($i, $j, $k, $ll, $cmd);
 
@@ -225,6 +229,7 @@ close(TMP);
 my $num_KO = scalar keys %KO_des;
 my $num_ko = scalar keys %ko_des;
 
+
 my %KO_abs = ();
 my %KO_abs_adj = ();
 my $sum_abs = 0;
@@ -238,12 +243,12 @@ while($ll=<TMP>) {
   chop($ll);
   my @lls = split(/\t/, $ll);
      
-  my $fr = $lls[10+7]; #### fraction of coverage on reference protein
+  my $fr = $lls[$fr_col]; #### fraction of coverage on reference protein
      $fr = 1.0 unless (($fr =~ /^\d/) and ($fr > 0.0));
-  my $KO = $lls[11+7]; #### if hit KO
+  my $KO = $lls[$KO_col]; #### if hit KO
   next unless ($KO =~ /^K\d+/);
 
-  my $ORF = $lls[5+7];
+  my $ORF = $lls[$orf_col];
   my $depth = 1;
   if ($ORF_depth_flag and $ORF_depth{$ORF}) {
     $depth =  $ORF_depth{$ORF};
@@ -418,6 +423,9 @@ $script_name -i ORF_annotation_file -k .keg_file -o output
     -r .keg file, contains a list of KOs of single copy house-keeping gene 
        as reference to calculate relative abundance. 
        e.g. there are 55 KOs M00178  Ribosome, bacteria [PATH:map03010] [BR:ko03011]
-
+    -c key annotation cols, 0'based, default "17,18,12", see example for ORF-ann.txt
+       1st is for fraction of coverage of target protein
+       2nd is for KO
+       3rd is for ORF/seq ID
 EOD
 }
