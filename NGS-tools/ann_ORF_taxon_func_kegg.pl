@@ -378,10 +378,10 @@ for $i (@full_KO_link) {
   foreach $j (@g_levels) {
     my $des = "";
     $des = $ABCDE_des{$j} if defined($ABCDE_des{$j});
-    print OUT "\t$des";
     if ($level_is_ko{$j}) {
       print OUT (defined($ko_des{$des})) ? "\t$ko_des{$des}" : "\t$des";
     }
+    print OUT "\t$des";
   }
   print OUT "\t$KO\t$KO_des{$KO}";
   my ($abs, $abs_adj, $r_abs, $r_abs_adj, $abs_2, $abs_adj_2) = qw/0 0 0 0 0 0/;
