@@ -6,7 +6,7 @@
 if [ $# -lt 2 ]
   then
     echo "Usage:"; echo
-    echo "$0 NGS-sample-file output-dir [taxonomy_dir optional]"; echo
+    echo "$0 NGS-sample-file output-dir [taxonomy_dir function_dir optional]"; echo
     exit
 fi
 
@@ -23,44 +23,49 @@ else
   TAXDIR=taxonomy
 fi
 
+if [ -n "$4" ]; then
+  FUNDIR=$4
+else
+  FUNDIR=blast-kegg-parse
+fi
 
 #### first sample
 SAM1=$(head -n 1 $1 | cut -f 1)
 
-if [ -s $SAM1/blast-kegg-parse/ORF-ann-kegg-module-full-des ]
+if [ -s $SAM1/$FUNDIR/ORF-ann-kegg-module-full-des ]
 then
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-full-des      -o $2/module-KO-depth.tsv               -c 0 -i 0 -v 8  -a 1,2,3,4,5,6,7
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-full-des      -o $2/module-KO-depth-adjusted.tsv      -c 0 -i 0 -v 9  -a 1,2,3,4,5,6,7
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-full-des      -o $2/module-KO-R.depth.tsv             -c 0 -i 0 -v 12 -a 1,2,3,4,5,6,7
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-full-des      -o $2/module-KO-R.depth-adjusted.tsv    -c 0 -i 0 -v 13 -a 1,2,3,4,5,6,7
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-D             -o $2/module-depth.tsv                  -c 0 -i 3 -v 8  -a 0,1,2,4
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-D             -o $2/module-depth-adjusted.tsv         -c 0 -i 3 -v 9  -a 0,1,2,4
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-D             -o $2/module-R.depth.tsv                -c 0 -i 3 -v 10 -a 0,1,2,4
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-module-D             -o $2/module-R.depth-adjusted.tsv       -c 0 -i 3 -v 11 -a 0,1,2,4
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-full-des      -o $2/module-KO-depth.tsv               -c 0 -i 0 -v 8  -a 1,2,3,4,5,6,7
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-full-des      -o $2/module-KO-depth-adjusted.tsv      -c 0 -i 0 -v 9  -a 1,2,3,4,5,6,7
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-full-des      -o $2/module-KO-R.depth.tsv             -c 0 -i 0 -v 12 -a 1,2,3,4,5,6,7
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-full-des      -o $2/module-KO-R.depth-adjusted.tsv    -c 0 -i 0 -v 13 -a 1,2,3,4,5,6,7
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-D             -o $2/module-depth.tsv                  -c 0 -i 3 -v 8  -a 0,1,2,4
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-D             -o $2/module-depth-adjusted.tsv         -c 0 -i 3 -v 9  -a 0,1,2,4
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-D             -o $2/module-R.depth.tsv                -c 0 -i 3 -v 10 -a 0,1,2,4
+  $p_pl -f $FUNDIR/ORF-ann-kegg-module-D             -o $2/module-R.depth-adjusted.tsv       -c 0 -i 3 -v 11 -a 0,1,2,4
   
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-depth.tsv                -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-depth-adjusted.tsv       -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-R.depth.tsv              -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-R.depth-adjusted.tsv     -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-C            -o $2/pathway-depth.tsv                   -c 0 -i 2 -v 7  -a 0,1,3
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-C            -o $2/pathway-depth-adjusted.tsv          -c 0 -i 2 -v 8  -a 0,1,3
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-C            -o $2/pathway-R.depth.tsv                 -c 0 -i 2 -v 9  -a 0,1,3
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-pathway-C            -o $2/pathway-R.depth-adjusted.tsv        -c 0 -i 2 -v 10 -a 0,1,3
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-depth.tsv                -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-depth-adjusted.tsv       -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-R.depth.tsv              -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-full-des     -o $2/pathway-KO-R.depth-adjusted.tsv     -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-C            -o $2/pathway-depth.tsv                   -c 0 -i 2 -v 7  -a 0,1,3
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-C            -o $2/pathway-depth-adjusted.tsv          -c 0 -i 2 -v 8  -a 0,1,3
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-C            -o $2/pathway-R.depth.tsv                 -c 0 -i 2 -v 9  -a 0,1,3
+  $p_pl -f $FUNDIR/ORF-ann-kegg-pathway-C            -o $2/pathway-R.depth-adjusted.tsv        -c 0 -i 2 -v 10 -a 0,1,3
   
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-depth.tsv            -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-depth-adjusted.tsv   -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-R.depth.tsv          -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-R.depth-adjusted.tsv -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-depth.tsv            -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-depth-adjusted.tsv   -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-R.depth.tsv          -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-transporter-full-des -o $2/transporter-KO-R.depth-adjusted.tsv -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
   
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-depth.tsv                     -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-depth-adjusted.tsv            -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-R.depth.tsv                   -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-R.depth-adjusted.tsv          -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-depth.tsv                     -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-depth-adjusted.tsv            -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-R.depth.tsv                   -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-EC-full-des          -o $2/EC-KO-R.depth-adjusted.tsv          -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
   
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-depth.tsv                    -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-depth-adjusted.tsv           -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-R.depth.tsv                  -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
-  $p_pl -f blast-kegg-parse/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-R.depth-adjusted.tsv         -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-depth.tsv                    -c 0 -i 0 -v 7  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-depth-adjusted.tsv           -c 0 -i 0 -v 8  -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-R.depth.tsv                  -c 0 -i 0 -v 11 -a 1,2,3,4,5,6
+  $p_pl -f $FUNDIR/ORF-ann-kegg-AMR-full-des         -o $2/AMR-KO-R.depth-adjusted.tsv         -c 0 -i 0 -v 12 -a 1,2,3,4,5,6
 fi
   
   
