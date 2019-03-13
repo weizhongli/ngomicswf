@@ -6,7 +6,7 @@
 if [ $# -lt 2 ]
   then
     echo "Usage:"; echo
-    echo "$0 NGS-sample-file output-dir"; echo
+    echo "$0 NGS-sample-file output-dir [taxonomy_dir optional]"; echo
     exit
 fi
 
@@ -16,6 +16,12 @@ s_dir=`dirname $0`
 s_dir=`dirname $s_dir`
 p_pl="$s_dir/NGS-tools/NGS-table-merge.pl -s $1 -t 0 -p 0"
 xlsx_py="$s_dir/NGS-tools/NGS-tsv_2_xlsx.py"
+
+if [ -n "$3" ]; then
+  TAXDIR=$3
+else
+  TAXDIR=taxonomy
+fi
 
 
 #### first sample
@@ -77,25 +83,25 @@ then
   $p_pl -f ann-summary/assembly-taxon-species -o $2/assembly-species-ORFs.tsv      -c 0 -i 0 -v 13 -a 1,2,3,4,5,6,7,8
 fi  
 
-if [ -s $SAM1/taxonomy/taxon.superkingdom.txt ]
+if [ -s $SAM1/$TAXDIR/taxon.superkingdom.txt ]
 then
   $p_pl -f qc/qc.txt -o $2/qc.tsv -c 0 -i 0 -v 1
-  $p_pl -f taxonomy/taxon.superkingdom-whost.txt    -o $2/taxon-superkingdom-whost.tsv -c 0      -i 0 -a 1 -v 2
+  $p_pl -f $TAXDIR/taxon.superkingdom-whost.txt    -o $2/taxon-superkingdom-whost.tsv -c 0      -i 0 -a 1 -v 2
 
-  $p_pl -f taxonomy/taxon.superkingdom.txt    -o $2/taxon-superkingdom.tsv -c 0      -i 0 -a 1 -v 2
-  $p_pl -f taxonomy/taxon.species.txt         -o $2/taxon-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 9
-  $p_pl -f taxonomy/taxon.genus.txt           -o $2/taxon-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 8
-  $p_pl -f taxonomy/taxon.family.txt          -o $2/taxon-family.tsv       -c 1e-4   -i 0 -a 1,2,3,4,5,6     -v 7
-  $p_pl -f taxonomy/taxon.order.txt           -o $2/taxon-order.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5       -v 6
-  $p_pl -f taxonomy/taxon.class.txt           -o $2/taxon-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 5
-  $p_pl -f taxonomy/taxon.phylum.txt          -o $2/taxon-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 4
+  $p_pl -f $TAXDIR/taxon.superkingdom.txt    -o $2/taxon-superkingdom.tsv -c 0      -i 0 -a 1 -v 2
+  $p_pl -f $TAXDIR/taxon.species.txt         -o $2/taxon-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 9
+  $p_pl -f $TAXDIR/taxon.genus.txt           -o $2/taxon-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 8
+  $p_pl -f $TAXDIR/taxon.family.txt          -o $2/taxon-family.tsv       -c 1e-4   -i 0 -a 1,2,3,4,5,6     -v 7
+  $p_pl -f $TAXDIR/taxon.order.txt           -o $2/taxon-order.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5       -v 6
+  $p_pl -f $TAXDIR/taxon.class.txt           -o $2/taxon-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 5
+  $p_pl -f $TAXDIR/taxon.phylum.txt          -o $2/taxon-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 4
   
-  $p_pl -f taxonomy/taxon.species.txt         -o $2/taxon-depth-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 10
-  $p_pl -f taxonomy/taxon.genus.txt           -o $2/taxon-depth-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 9
-  $p_pl -f taxonomy/taxon.family.txt          -o $2/taxon-depth-family.tsv       -c 1e-4   -i 0 -a 1,2,3,4,5,6     -v 8
-  $p_pl -f taxonomy/taxon.order.txt           -o $2/taxon-depth-order.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5       -v 7
-  $p_pl -f taxonomy/taxon.class.txt           -o $2/taxon-depth-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 6
-  $p_pl -f taxonomy/taxon.phylum.txt          -o $2/taxon-depth-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 5
+  $p_pl -f $TAXDIR/taxon.species.txt         -o $2/taxon-depth-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 10
+  $p_pl -f $TAXDIR/taxon.genus.txt           -o $2/taxon-depth-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 9
+  $p_pl -f $TAXDIR/taxon.family.txt          -o $2/taxon-depth-family.tsv       -c 1e-4   -i 0 -a 1,2,3,4,5,6     -v 8
+  $p_pl -f $TAXDIR/taxon.order.txt           -o $2/taxon-depth-order.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5       -v 7
+  $p_pl -f $TAXDIR/taxon.class.txt           -o $2/taxon-depth-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 6
+  $p_pl -f $TAXDIR/taxon.phylum.txt          -o $2/taxon-depth-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 5
 fi  
   
 #### chdir
