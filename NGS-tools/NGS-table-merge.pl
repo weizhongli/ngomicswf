@@ -35,6 +35,7 @@ my $cutoff              = $opts{c}; #### cutoff values
    $cutoff              = 0  unless (defined $cutoff);
 my $sort_flag           = $opts{t}; $sort_flag = 1 unless (defined $sort_flag);
 my $stat_flag           = $opts{p}; $stat_flag = 0 unless (defined $stat_flag);
+my $cutoff_col          = $opts{d}; $cutoff_col = $value_col unless (defined $cutoff_col);
 
 my @ann_cols = ();if ($ann_cols) { @ann_cols = split(/,/, $ann_cols);}
 
@@ -79,7 +80,7 @@ if (1) {
       $id = $lls[$id_col];
       $id.= ",$lls[$id_colj]" if ($id_colj);
       $value = $lls[$value_col];
-      next unless ($value >= $cutoff);
+      next unless ($lls[$cutoff_col] >= $cutoff);
 
       $ids{$id} = 1;
       if (not defined( $id_2_ann{$id})) {
@@ -174,7 +175,7 @@ options:
     -a 0-based columns for annotations delimited by ",", defaults none
     -v 0-based value column, default -1
     -c cutoff values delimited by ","
-
+    -d 0-based column for cutoff, default column is the value column
 EOD
 }
 ########## END usage
