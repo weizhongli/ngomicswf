@@ -711,6 +711,7 @@ def run_workflow(NGS_config):
 
     #### if has submitted some jobs, reset waiting time, otherwise double waiting time
     print_job_status_summary(NGS_config)
+    sys.stdout.flush()
     if has_submitted_some_jobs:
       sleep_time = sleep_time_min
     else:
