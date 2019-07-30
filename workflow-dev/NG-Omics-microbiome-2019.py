@@ -177,7 +177,7 @@ grep -vP "0.0$" $SELF/centrifuge-taxon > $SELF/centrifuge-taxon.1
 
 # count total number of input reads
 NUM_reads=$(grep -c "^>" $INJOBS.0/non-host-R1.fa)
-/home/wli/git/ngomicswf/NGS-tools/JCVI/centrifuge-taxon.pl -i $SELF/centrifuge-out -j $SELF/centrifuge-report \\
+$ENV.NGS_root/NGS-tools/centrifuge-taxon.pl -i $SELF/centrifuge-out -j $SELF/centrifuge-report \\
   -t $ENV.NGS_root/refs/$CMDOPTS.2 -a $ENV.NGS_root/refs/$CMDOPTS.3 \\
   -o $SELF/taxon -c 1e-7 -N $NUM_reads -l 60
 
