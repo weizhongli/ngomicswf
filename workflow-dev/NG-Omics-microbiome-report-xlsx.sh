@@ -93,13 +93,13 @@ then
   $p_pl -f qc/qc.txt -o $2/qc.tsv -c 0 -i 0 -v 1
   $p_pl -f $TAXDIR/taxon.superkingdom-whost.txt    -o $2/taxon-superkingdom-whost.tsv -c 0      -i 0 -a 1 -v 2
 
-  $p_pl -f $TAXDIR/taxon.superkingdom.txt    -o $2/taxon-superkingdom.tsv -c 0      -i 0 -a 1 -v 2
-  $p_pl -f $TAXDIR/taxon.species.txt         -o $2/taxon-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 9
-  $p_pl -f $TAXDIR/taxon.genus.txt           -o $2/taxon-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 8
-  $p_pl -f $TAXDIR/taxon.family.txt          -o $2/taxon-family.tsv       -c 1e-4   -i 0 -a 1,2,3,4,5,6     -v 7
-  $p_pl -f $TAXDIR/taxon.order.txt           -o $2/taxon-order.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5       -v 6
-  $p_pl -f $TAXDIR/taxon.class.txt           -o $2/taxon-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 5
-  $p_pl -f $TAXDIR/taxon.phylum.txt          -o $2/taxon-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 4
+  $p_pl -f $TAXDIR/taxon.superkingdom.txt    -o $2/taxon-superkingdom.tsv       -c 0      -i 0 -a 1 -v 2
+  $p_pl -f $TAXDIR/taxon.species.txt         -o $2/taxon-species.tsv            -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 9
+  $p_pl -f $TAXDIR/taxon.genus.txt           -o $2/taxon-genus.tsv              -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 8
+  $p_pl -f $TAXDIR/taxon.family.txt          -o $2/taxon-family.tsv             -c 1e-4   -i 0 -a 1,2,3,4,5,6     -v 7
+  $p_pl -f $TAXDIR/taxon.order.txt           -o $2/taxon-order.tsv              -c 1e-4   -i 0 -a 1,2,3,4,5       -v 6
+  $p_pl -f $TAXDIR/taxon.class.txt           -o $2/taxon-class.tsv              -c 1e-4   -i 0 -a 1,2,3,4         -v 5
+  $p_pl -f $TAXDIR/taxon.phylum.txt          -o $2/taxon-phylum.tsv             -c 1e-4   -i 0 -a 1,2,3           -v 4
   
   $p_pl -f $TAXDIR/taxon.species.txt         -o $2/taxon-depth-species.tsv      -c 1e-4   -i 0 -a 1,2,3,4,5,6,7,8 -v 10
   $p_pl -f $TAXDIR/taxon.genus.txt           -o $2/taxon-depth-genus.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5,6,7   -v 9
@@ -107,6 +107,13 @@ then
   $p_pl -f $TAXDIR/taxon.order.txt           -o $2/taxon-depth-order.tsv        -c 1e-4   -i 0 -a 1,2,3,4,5       -v 7
   $p_pl -f $TAXDIR/taxon.class.txt           -o $2/taxon-depth-class.tsv        -c 1e-4   -i 0 -a 1,2,3,4         -v 6
   $p_pl -f $TAXDIR/taxon.phylum.txt          -o $2/taxon-depth-phylum.tsv       -c 1e-4   -i 0 -a 1,2,3           -v 5
+  
+  $p_pl -f $TAXDIR/taxon.species.txt         -o $2/taxon-reads-species.tsv      -c 1      -i 0 -a 1,2,3,4,5,6,7,8 -v 11
+  $p_pl -f $TAXDIR/taxon.genus.txt           -o $2/taxon-reads-genus.tsv        -c 1      -i 0 -a 1,2,3,4,5,6,7   -v 10
+  $p_pl -f $TAXDIR/taxon.family.txt          -o $2/taxon-reads-family.tsv       -c 1      -i 0 -a 1,2,3,4,5,6     -v 9
+  $p_pl -f $TAXDIR/taxon.order.txt           -o $2/taxon-reads-order.tsv        -c 1      -i 0 -a 1,2,3,4,5       -v 8
+  $p_pl -f $TAXDIR/taxon.class.txt           -o $2/taxon-reads-class.tsv        -c 1      -i 0 -a 1,2,3,4         -v 7
+  $p_pl -f $TAXDIR/taxon.phylum.txt          -o $2/taxon-reads-phylum.tsv       -c 1      -i 0 -a 1,2,3           -v 6
 fi  
   
 #### chdir
@@ -131,6 +138,7 @@ fi
 if [ -s taxon-superkingdom.tsv ]
 then
   $xlsx_py -i taxon-depth-phylum.tsv,taxon-depth-class.tsv,taxon-depth-order.tsv,taxon-depth-family.tsv,taxon-depth-genus.tsv,taxon-depth-species.tsv -o taxon-depth.xlsx
-  $xlsx_py -i qc.tsv,taxon-superkingdom-whost.tsv,taxon-superkingdom.tsv,taxon-species.tsv,taxon-genus.tsv,taxon-family.tsv,taxon-order.tsv,taxon-class.tsv,taxon-phylum.tsv -o taxonomy.xlsx
+  $xlsx_py -i taxon-reads-phylum.tsv,taxon-reads-class.tsv,taxon-reads-order.tsv,taxon-reads-family.tsv,taxon-reads-genus.tsv,taxon-reads-species.tsv -o taxon-reads.xlsx
+  $xlsx_py -i qc.tsv,taxon-superkingdom-whost.tsv,taxon-superkingdom.tsv,taxon-phylum.tsv,taxon-class.tsv,taxon-order.tsv,taxon-family.tsv,taxon-genus.tsv,taxon-species.tsv -o taxon.xlsx
 fi
 
