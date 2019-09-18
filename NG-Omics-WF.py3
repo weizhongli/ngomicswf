@@ -693,7 +693,7 @@ def run_workflow(NGS_config):
           command_line = qsub_exe + ' {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
                                                                           t_execution['command_err_opt'], t_stderr, 
                                                                           t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])
-          cmd = subprocess.check_output([command_line], shell=True)
+          cmd = subprocess.check_output([command_line], shell=True).decode('utf-8')
           if re.search('\d+', cmd):
             pid = re.search('\d+', cmd).group(0)
             pid_file.write(pid + '\n')
