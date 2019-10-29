@@ -363,17 +363,25 @@ $ENV.NGS_root/NGS-tools/ann_parse_hmm.pl -i $INJOBS.0/pfam.3 -o $SELF/pfam-ann.t
 
 NGS_batch_jobs['blast-kegg'] = {
   'injobs'         : ['cd-hit-kegg'],
-  'CMD_opts'       : ['kegg/keggf'],
+  'CMD_opts'       : ['kegg/keggf','Run'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 2,               # number of total jobs to run using command below
   'command'        : '''
 
-for i in `seq 1 4`
-  do $ENV.NGS_root/NGS-tools/ann_batch_run_dir.pl --INDIR1=$INJOBS.0/orf-split --OUTDIR1=$SELF/blast --CPU=$SELF/WF.cpu $ENV.NGS_root/apps/blast+/bin/blastp  -query {INDIR1} -out {OUTDIR1} \\
-  -db $ENV.NGS_root/refs/$CMDOPTS.0 -evalue 1e-6 -num_threads 4 -num_alignments 5 -outfmt 6 -seg yes &
-done
-wait
+  'CMD_opts'         : ['100','NexteraPE'],
+
+#### skip this - only use cd-hit-kegg's result
+if [ "$CMDOPTS.1" = "Skip" ] 
+  echo "Skip" >> $SELF/skip.txt
+then
+  for i in `seq 1 4`
+    do $ENV.NGS_root/NGS-tools/ann_batch_run_dir.pl --INDIR1=$INJOBS.0/orf-split --OUTDIR1=$SELF/blast --CPU=$SELF/WF.cpu $ENV.NGS_root/apps/blast+/bin/blastp  -query {INDIR1} -out {OUTDIR1} \\
+    -db $ENV.NGS_root/refs/$CMDOPTS.0 -evalue 1e-6 -num_threads 4 -num_alignments 5 -outfmt 6 -seg yes &
+  done
+  wait
+else
+fi
 
 '''
 }
