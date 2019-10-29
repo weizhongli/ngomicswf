@@ -144,7 +144,59 @@ $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/rRNA-hit.ids -s  $IN
 '''
 }
 
+NGS_batch_jobs['centrifuge-mapping'] = {
+  'injobs'         : ['remove-host', 'remove-rRNA'],
+  'CMD_opts'       : ['ref-genomes-2018-1109/centrifuge/ref_full','ref-genomes-2018-1109/centrifuge/map',
+                      'ref-genomes-2018-1109/refseq_genome_taxon.tsv', 'ref-genomes-2018-1109/centrifuge/ref_full.ann'], ## 2018 version
+  'non_zero_files' : ['centrifuge-out.gz','centrifuge-taxon','centrifuge-report'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
 
+$ENV.NGS_root/apps/centrifuge/centrifuge -1 $INJOBS.1/non-rRNA-R1.fa -2 $INJOBS.1/non-rRNA-R2.fa \\
+  -x $ENV.NGS_root/refs/$CMDOPTS.0 \\
+  -S $SELF/centrifuge-out --report-file $SELF/centrifuge-taxon -p 16 -f --out-fmt tab 
+$ENV.NGS_root/apps/centrifuge/centrifuge-kreport -x $ENV.NGS_root/refs/$CMDOPTS.0 $SELF/centrifuge-out > $SELF/centrifuge-report
+
+grep -vP "0.0$" $SELF/centrifuge-taxon > $SELF/centrifuge-taxon.1
+(head -n 1 $SELF/centrifuge-taxon.1 && tail -n +2 $SELF/centrifuge-taxon.1 | sort -grt $'\\t' -k 7,7 ) > $SELF/centrifuge-taxon.2
+
+# count total number of input reads
+NUM_reads=$(grep -c "^>" $INJOBS.1/non-rRNA-R1.fa)
+$ENV.NGS_root/NGS-tools/centrifuge-taxon.pl -i $SELF/centrifuge-out -j $SELF/centrifuge-report \\
+  -t $ENV.NGS_root/refs/$CMDOPTS.2 -a $ENV.NGS_root/refs/$CMDOPTS.3 \\
+  -o $SELF/taxon -c 1e-7 -N $NUM_reads -l 60
+
+gzip -f $SELF/centrifuge-out
+
+# number of host reads
+NUM_HOST=0
+if [ -s $INJOBS.0/host-hit.ids ]
+then
+  NUM_HOST=$(grep -c "." $INJOBS.0/host-hit.ids)
+else
+  NUM_HOST=0
+fi
+
+# number of rRNA, tRNA reads
+NUM_TRNA_RRNA=0
+if [ -s $INJOBS.1/rRNA-hit.ids ]
+then
+  NUM_TRNA_RRNA=$(grep -c "." $INJOBS.1/rRNA-hit.ids)
+else
+  NUM_TRNA_RRNA=0
+fi
+
+cp -p $SELF/taxon.superkingdom.txt $SELF/taxon.superkingdom-whost.txt
+echo -e "Host\\tHost\\t$NUM_HOST" >> $SELF/taxon.superkingdom-whost.txt
+echo -e "rRNA_tRNA\\trRNA_tRNA\\t$NUM_TRNA_RRNA" >> $SELF/taxon.superkingdom-whost.txt
+
+'''
+}
+
+
+#### obsolete
 NGS_batch_jobs['reads-mapping'] = {
   'injobs'         : ['remove-rRNA'],
   'CMD_opts'       : ['75'],          # significant score cutoff
@@ -164,6 +216,7 @@ $ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-gen
 '''
 }
 
+#### obsolete
 NGS_batch_jobs['taxonomy'] = {
   'injobs'         : ['remove-host', 'remove-rRNA','reads-mapping'],
   'execution'      : 'qsub_1',        # where to execute
@@ -276,6 +329,30 @@ $ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $SELF/ORF.faa -d $INJOBS.
 }
 
 
+NGS_batch_jobs['minimap-binning'] = {
+  'injobs'         : ['assembly','centrifuge-mapping','ORF-prediction'],
+  'CMD_opts'       : ['0.01','ref-genomes-2018-1109/bwa/ref_full.fna','ref-genomes-2018-1109/bwa/ref_full.fna.header',
+                      'ref-genomes-2018-1109/refseq_genome_taxon.tsv'],
+  'non_zero_files' : ['assembly-bin'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+#### print taxids with depth > cutoff
+grep -v "^#" $INJOBS.1/taxon.toprank.txt | gawk -F '\\t' '($12+0.0) > $CMDOPTS.0 {print $1}' > $SELF/high_cov.taxids
+$ENV.NGS_root/NGS-tools/fasta_idx_fetch_by_ids.pl -i $SELF/high_cov.taxids -s $ENV.NGS_root/refs/$CMDOPTS.1 \\
+  -a taxid -h $ENV.NGS_root/refs/$CMDOPTS.2 -o $SELF/high_cov_ref.fna
+
+$ENV.NGS_root/apps/minimap2/minimap2 $SELF/high_cov_ref.fna $INJOBS.0/assembly/scaffold.fa -N 20 -t 8 > $SELF/hits.paf
+rm -f $SELF/high_cov_ref.fna
+
+$ENV.NGS_root/NGS-tools/JCVI/minimap-binning-taxon.pl -i $SELF/hits.paf -s $INJOBS.0/assembly/scaffold.fa \\
+  -t $ENV.NGS_root/refs/$CMDOPTS.3 -o $SELF/assembly-bin
+'''
+}
+
+#### obsolete
 NGS_batch_jobs['assembly-binning'] = {
   'injobs'         : ['assembly','remove-rRNA','reads-mapping','ORF-prediction'],
   'CMD_opts'       : ['75','ref-genomes/ref_genome_taxon.txt'],     # alignment cutoff score for both R1 and R2
@@ -385,7 +462,7 @@ fi
 }
 
 NGS_batch_jobs['blast-kegg-parse'] = {
-  'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction','assembly-binning'],
+  'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction','minimap-binning'],
   'CMD_opts'       : ['kegg/keggf_taxon.txt', 'ref-genomes/ref_genome_taxon.txt', 'kegg/keggf.clstr.ann', 'kegg/ko00002-M00178.keg'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
@@ -418,7 +495,7 @@ $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg_per_sp.pl -i $SELF/ORF-ann.txt -
 }
 
 NGS_batch_jobs['ann-summary'] = {
-  'injobs'         : ['assembly-binning','blast-kegg-parse','assembly'],
+  'injobs'         : ['minimap-binning','blast-kegg-parse','assembly'],
   'CMD_opts'       : ['kegg/keggf_taxon.txt','ref-genomes/ref_genome_taxon.txt','ref-genomes/ref_genome_full.ann'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 4,              # number of threads used by command below
