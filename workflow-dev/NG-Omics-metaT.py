@@ -369,8 +369,6 @@ NGS_batch_jobs['blast-kegg'] = {
   'no_parallel'    : 2,               # number of total jobs to run using command below
   'command'        : '''
 
-  'CMD_opts'         : ['100','NexteraPE'],
-
 #### skip this - only use cd-hit-kegg's result
 if [ "$CMDOPTS.1" = "Skip" ] 
   echo "Skip" >> $SELF/skip.txt
