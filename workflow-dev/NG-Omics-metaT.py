@@ -463,7 +463,7 @@ fi
 }
 
 NGS_batch_jobs['blast-kegg-parse'] = {
-  'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction','minimap-binning'],
+  'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction','minimap-binning','assembly'],
   'CMD_opts'       : ['kegg/keggf_taxon.txt', 'ref-genomes/ref_genome_taxon.txt', 'kegg/keggf.clstr.ann', 'kegg/ko00002-M00178.keg'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
@@ -472,7 +472,7 @@ NGS_batch_jobs['blast-kegg-parse'] = {
 ln -s ../../$INJOBS.1/out.bl $INJOBS.0/blast/out.bl
 
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_prebin.pl -i $INJOBS.0/blast -r $ENV.NGS_root/refs/$CMDOPTS.2 \\
-  -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0 -s $INJOBS.3/assembly-bin -x $ENV.NGS_root/refs/$CMDOPTS.1 -p $SELF/scaffold-ann.txt -d $INJOBS.3/scaffold-cov
+  -a $INJOBS.2/ORF.faa -o $SELF/ORF -t $ENV.NGS_root/refs/$CMDOPTS.0 -s $INJOBS.3/assembly-bin -x $ENV.NGS_root/refs/$CMDOPTS.1 -p $SELF/scaffold-ann.txt -d $INJOBS.4/assembly/scaffold-cov
 
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00001-biome.keg -o $SELF/ORF-ann-kegg-pathway     -r $ENV.NGS_root/refs/$CMDOPTS.3
 $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg.pl -i $SELF/ORF-ann.txt -d $INJOBS.3/ORF-cov -k $ENV.NGS_root/refs/kegg/ko00002-edit.keg  -o $SELF/ORF-ann-kegg-module      -r $ENV.NGS_root/refs/$CMDOPTS.3
@@ -504,7 +504,7 @@ NGS_batch_jobs['ann-summary'] = {
   'command'        : '''
 $ENV.NGS_root/NGS-tools/JCVI/assembly-orf-summary.pl -t $ENV.NGS_root/refs/$CMDOPTS.0 -x $ENV.NGS_root/refs/$CMDOPTS.1 \\
   -b $INJOBS.0/assembly-bin -i $INJOBS.1/scaffold-ann.txt -o $SELF/assembly-orf-summary.txt \\
-  -a $ENV.NGS_root/refs/$CMDOPTS.2 -p $SELF/assembly-taxon -N 10 -d $INJOBS.0/scaffold-cov
+  -a $ENV.NGS_root/refs/$CMDOPTS.2 -p $SELF/assembly-taxon -N 10 -d $INJOBS.2/assembly/scaffold-cov
 
 for i in `ls -1 $SELF/assembly-taxon*sids`;
 do
