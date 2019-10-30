@@ -449,6 +449,7 @@ NGS_batch_jobs['blast-kegg'] = {
 #### skip this - only use cd-hit-kegg's result
 if [ "$CMDOPTS.1" = "Skip" ] 
 then
+  mkdir $SELF/blast
   echo "Skip" >> $SELF/skip.txt
 else
   for i in `seq 1 4`
