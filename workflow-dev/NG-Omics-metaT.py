@@ -464,7 +464,7 @@ fi
 
 NGS_batch_jobs['blast-kegg-parse'] = {
   'injobs'         : ['blast-kegg','cd-hit-kegg','ORF-prediction','minimap-binning','assembly'],
-  'CMD_opts'       : ['kegg/keggf_taxon.txt', 'ref-genomes/ref_genome_taxon.txt', 'kegg/keggf.clstr.ann', 'kegg/ko00002-M00178.keg'],
+  'CMD_opts'       : ['kegg/keggf_taxon.txt', 'ref-genomes-2018-1109/refseq_genome_taxon.tsv', 'kegg/keggf.clstr.ann', 'kegg/ko00002-M00178.keg'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 2,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -497,7 +497,7 @@ $ENV.NGS_root/NGS-tools/ann_ORF_taxon_func_kegg_per_sp.pl -i $SELF/ORF-ann.txt -
 
 NGS_batch_jobs['ann-summary'] = {
   'injobs'         : ['minimap-binning','blast-kegg-parse','assembly'],
-  'CMD_opts'       : ['kegg/keggf_taxon.txt','ref-genomes/ref_genome_taxon.txt','ref-genomes/ref_genome_full.ann'],
+  'CMD_opts'       : ['kegg/keggf_taxon.txt','ref-genomes-2018-1109/refseq_genome_taxon.tsv','ref-genomes-2018-1109/centrifuge/ref_full.ann'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 4,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
