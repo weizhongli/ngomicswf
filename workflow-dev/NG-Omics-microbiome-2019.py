@@ -100,8 +100,9 @@ NGS_batch_jobs['reads-filtering'] = {
 
 #### db1 for host filtering
 if [ ! "$CMDOPTS.0" = "NONE" ]; then
+#### -F 1 for sam-filter-top-pair-or-single.pl means only accept the reads that are mapped in proper pairs
   $ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.0 \\
-    $INJOBS.0/R1.fa.gz $INJOBS.0/R2.fa.gz | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 1 -O $SELF/host-hit.ids | \\
+    $INJOBS.0/R1.fa.gz $INJOBS.0/R2.fa.gz | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/host-hit.ids | \\
     $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/host.top.bam
 else
   touch $SELF/host-hit.ids
@@ -110,7 +111,7 @@ fi
 #### db2 for rRNA filtering
 if [ ! "$CMDOPTS.1" = "NONE" ]; then
   $ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60  $ENV.NGS_root/refs/$CMDOPTS.1 \\
-    $INJOBS.0/R1.fa.gz $INJOBS.0/R2.fa.gz | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 1 -O $SELF/rRNA-hit.ids | \\
+    $INJOBS.0/R1.fa.gz $INJOBS.0/R2.fa.gz | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/rRNA-hit.ids | \\
     $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/rRNA.top.bam
 else
   touch $SELF/rRNA-hit.ids
