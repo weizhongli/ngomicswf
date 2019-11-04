@@ -312,6 +312,8 @@ NGS_batch_jobs['cd-hit-kegg'] = {
   'command'        : '''
 $ENV.NGS_root/apps/cd-hit/cd-hit-2d -i $ENV.NGS_root/refs/$CMDOPTS.0 -i2 $INJOBS.0/ORF.faa -o $SELF/out \\
   -c 0.75 -n 5 -d 0 -g 1 -G 0 -aS 0.9 -A 60 -aL 0.25 -T 16 -M 32000 > $SELF/out.log
+$ENV.NGS_root/apps/cd-hit/clstr_select.pl 2 99999999 < $SELF/out.clstr > $SELF/out.clstr.1
+mv -f $SELF/out.clstr.1 $SELF/out.clstr
 $ENV.NGS_root/apps/cd-hit/cd-hit-clstr_2_blm8.pl < $SELF/out.clstr > $SELF/out.bl
 
 mkdir $SELF/orf-split
