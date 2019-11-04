@@ -44,6 +44,7 @@ NGS_executions['sh_1'] = {
 NGS_batch_jobs = {}
 NGS_batch_jobs['qc'] = {
   'CMD_opts'         : ['100','NexteraPE'],
+  'non_zero_files'   : ['R1.fa.gz','R2.fa.gz'],
   'execution'        : 'qsub_1',               # where to execute
   'cores_per_cmd'    : 4,                    # number of threads used by command below
   'no_parallel'      : 1,                    # number of total jobs to run using command below
@@ -63,8 +64,12 @@ fi
 
 perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr($_,1); $a=<>; print $a; $a=<>; $a=<>;}}' < $SELF/R1.fq > $SELF/R1.fa &
 perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr($_,1); $a=<>; print $a; $a=<>; $a=<>;}}' < $SELF/R2.fq > $SELF/R2.fa &
-
 wait
+
+gzip $SELF/R1.fa &
+gzip $SELF/R2.fa &
+wait
+
 rm -f $SELF/R1.fq $SELF/R2.fq $SELF/R1-s.fq $SELF/R2-s.fq
 
 #### qc.txt
@@ -86,7 +91,7 @@ echo -e "QC_reads\\t$NUM_reads_pass" >> $SELF/qc.txt
 NGS_batch_jobs['remove-host'] = {
   'injobs'         : ['qc'],          # start with high quality reads
   'CMD_opts'       : ['bwa','host/GRCh38.fa'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
-  'non_zero_files' : ['non-host-R1.fa','non-host-R2.fa'],
+  'non_zero_files' : ['non-host-R1.fa.gz','non-host-R2.fa.gz'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
@@ -95,51 +100,51 @@ NGS_batch_jobs['remove-host'] = {
 if [ "$CMDOPTS.0" = "bwa" ]
 then
   $ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60 $ENV.NGS_root/refs/$CMDOPTS.1 \\
-  $INJOBS.0/R1.fa $INJOBS.0/R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/host-hit.ids | \\
+  $INJOBS.0/R1.fa.gz $INJOBS.0/R2.fa.gz | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/host-hit.ids | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/host.top.bam
 
-  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
-  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
-  
-elif [ "$CMDOPTS.0" = "bowtie2" ]
-then
-  #### bowtie2 is not actively used
-  $ENV.NGS_root/apps/bin/bowtie -f -k 1 -v 2 -p 16 $ENV.NGS_root/refs/host $INJOBS.0/R1.fa $SELF/host-hit-1 &
-  $ENV.NGS_root/apps/bin/bowtie -f -k 1 -v 2 -p 16 $ENV.NGS_root/refs/host $INJOBS.0/R2.fa $SELF/host-hit-2 &
+  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa.gz -o $SELF/non-host-R1.fa &
+  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa.gz -o $SELF/non-host-R2.fa &
   wait
-  cut -f 1 $SELF/host-hit-1 > $SELF/host-hit-R1.ids
-  cut -f 1 $SELF/host-hit-2 > $SELF/host-hit-R2.ids
-  rm -f $SELF/host-hit-R1.ids $SELF/host-hit-R2.ids
-  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R1.fa -o $SELF/non-host-R1.fa
-  $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/host-hit.ids -s  $INJOBS.0/R2.fa -o $SELF/non-host-R2.fa
 
+  gzip $SELF/non-host-R1.fa &
+  gzip $SELF/non-host-R2.fa &
+  wait
+  
 elif [ "$CMDOPTS.0" = "skip" ]
 then
   #### do nothing, simply link 
-  ln -s ../$INJOBS.0/R1.fa $SELF/non-host-R1.fa
-  ln -s ../$INJOBS.0/R2.fa $SELF/non-host-R2.fa
+  ln -s ../$INJOBS.0/R1.fa.gz $SELF/non-host-R1.fa.gz
+  ln -s ../$INJOBS.0/R2.fa.gz $SELF/non-host-R2.fa.gz
 
 else
   echo "not defined filter-host method"
   exit 1  
 fi
+
+
 '''
 }
 
 NGS_batch_jobs['remove-rRNA'] = {
   'injobs'         : ['remove-host'],          # start with high quality reads
   'CMD_opts'       : ['total_RNA/total_RNA'],         # can be bwa, bowtie2 or skip (do nothing for non-host related sample)
-  'non_zero_files' : ['non-rRNA-R1.fa','non-rRNA-R2.fa'],
+  'non_zero_files' : ['non-rRNA-R1.fa.gz','non-rRNA-R2.fa.gz'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 $ENV.NGS_root/apps/bin/bwa mem -t 16 -T 60  $ENV.NGS_root/refs/$CMDOPTS.0 \\
-  $INJOBS.0/non-host-R1.fa $INJOBS.0/non-host-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/rRNA-hit.ids | \\
+  $INJOBS.0/non-host-R1.fa.gz $INJOBS.0/non-host-R2.fa.gz | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T 60 -F 0 -O $SELF/rRNA-hit.ids | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/rRNA.top.bam
 
-$ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/rRNA-hit.ids -s  $INJOBS.0/non-host-R1.fa -o $SELF/non-rRNA-R1.fa
-$ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/rRNA-hit.ids -s  $INJOBS.0/non-host-R2.fa -o $SELF/non-rRNA-R2.fa
+$ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/rRNA-hit.ids -s  $INJOBS.0/non-host-R1.fa.gz -o $SELF/non-rRNA-R1.fa &
+$ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/rRNA-hit.ids -s  $INJOBS.0/non-host-R2.fa.gz -o $SELF/non-rRNA-R2.fa &
+wait
+
+gzip $SELF/non-rRNA-R1.fa &
+gzip $SELF/non-rRNA-R2.fa &
+wait
 
 '''
 }
@@ -154,7 +159,7 @@ NGS_batch_jobs['centrifuge-mapping'] = {
   'no_parallel'    : 1,               # number of total jobs to run using command below
   'command'        : '''
 
-$ENV.NGS_root/apps/centrifuge/centrifuge -1 $INJOBS.1/non-rRNA-R1.fa -2 $INJOBS.1/non-rRNA-R2.fa \\
+$ENV.NGS_root/apps/centrifuge/centrifuge -1 $INJOBS.1/non-rRNA-R1.fa.gz -2 $INJOBS.1/non-rRNA-R2.fa.gz \\
   -x $ENV.NGS_root/refs/$CMDOPTS.0 \\
   -S $SELF/centrifuge-out --report-file $SELF/centrifuge-taxon -p 16 -f --out-fmt tab 
 $ENV.NGS_root/apps/centrifuge/centrifuge-kreport -x $ENV.NGS_root/refs/$CMDOPTS.0 $SELF/centrifuge-out > $SELF/centrifuge-report
@@ -163,7 +168,7 @@ grep -vP "0.0$" $SELF/centrifuge-taxon > $SELF/centrifuge-taxon.1
 (head -n 1 $SELF/centrifuge-taxon.1 && tail -n +2 $SELF/centrifuge-taxon.1 | sort -grt $'\\t' -k 7,7 ) > $SELF/centrifuge-taxon.2
 
 # count total number of input reads
-NUM_reads=$(grep -c "^>" $INJOBS.1/non-rRNA-R1.fa)
+NUM_reads=$(zcat $INJOBS.1/non-rRNA-R1.fa.gz | grep -c "^>")
 $ENV.NGS_root/NGS-tools/centrifuge-taxon.pl -i $SELF/centrifuge-out -j $SELF/centrifuge-report \\
   -t $ENV.NGS_root/refs/$CMDOPTS.2 -a $ENV.NGS_root/refs/$CMDOPTS.3 \\
   -o $SELF/taxon -c 1e-7 -N $NUM_reads -l 60
@@ -210,7 +215,7 @@ NGS_batch_jobs['reads-mapping'] = {
 #  $INJOBS.0/non-rRNA-R1.fa $INJOBS.0/non-rRNA-R2.fa | $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.raw.bam
 
 $ENV.NGS_root/apps/bin/bwa mem -t 16 -T $CMDOPTS.0 -M $ENV.NGS_root/refs/ref-genomes/ref_genome_full \\
-  $INJOBS.0/non-rRNA-R1.fa $INJOBS.0/non-rRNA-R2.fa | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T $CMDOPTS.0 | \\
+  $INJOBS.0/non-rRNA-R1.fa.gz $INJOBS.0/non-rRNA-R2.fa.gz | $ENV.NGS_root/NGS-tools/sam-filter-top-pair-or-single.pl -T $CMDOPTS.0 | \\
   $ENV.NGS_root/apps/bin/samtools view -b -S - > $SELF/ref_genome.top.bam
 
 '''
@@ -227,7 +232,7 @@ NGS_batch_jobs['taxonomy'] = {
 # Add additional BAM filtering steps below
 
 # count total number of input reads
-NUM_reads=$(grep -c "^>" $INJOBS.1/non-rRNA-R1.fa)
+NUM_reads=$(zcat $INJOBS.1/non-rRNA-R1.fa | grep -c "^>")
 
 $ENV.NGS_root/apps/bin/samtools view $INJOBS.2/ref_genome.top.bam | \\
   $ENV.NGS_root/NGS-tools/sam-to-taxon-abs-ez.pl -a $ENV.NGS_root/refs/ref-genomes/ref_genome_full.ann -t $ENV.NGS_root/refs/ref-genomes/ref_genome_taxon.txt \\
@@ -269,13 +274,13 @@ NGS_batch_jobs['assembly'] = {
   'command'        : '''
 if [ "$CMDOPTS.0" = "idba-ud" ]
 then
-  $ENV.NGS_root/NGS-tools/PE-2file-to-1file.pl -i $INJOBS.0/non-rRNA-R1.fa,$INJOBS.0/non-rRNA-R2.fa -r 0 > $SELF/input.fa
+  $ENV.NGS_root/NGS-tools/PE-2file-to-1file.pl -i $INJOBS.0/non-rRNA-R1.fa.gz,$INJOBS.0/non-rRNA-R2.fa.gz -r 0 > $SELF/input.fa
   $ENV.NGS_root/apps/bin/idba_ud -r $SELF/input.fa -o $SELF/assembly --mink=50 --maxk=80 --step=10 --num_threads=16 --min_contig=$CMDOPTS.1 
   rm -f $SELF/input.fa $SELF/assembly/kmer $SELF/assembly/local* $SELF/assembly/contig* $SELF/assembly/graph*
   
 elif [ "$CMDOPTS.0" = "spade" ]
 then
-  python $ENV.NGS_root/apps/SPAdes/bin/spades.py -1 $INJOBS.0/non-rRNA-R1.fa -2 $INJOBS.0/non-rRNA-R2.fa --meta --only-assembler -o $SELF/assembly -t 16
+  python $ENV.NGS_root/apps/SPAdes/bin/spades.py -1 $INJOBS.0/non-rRNA-R1.fa.gz -2 $INJOBS.0/non-rRNA-R2.fa.gz --meta --only-assembler -o $SELF/assembly -t 16
   mv $SELF/assembly/scaffolds.fasta $SELF/assembly/scaffold.fa
   rm -rf $SELF/assembly/K*
   rm -rf $SELF/assembly/tmp
