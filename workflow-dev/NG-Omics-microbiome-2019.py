@@ -137,10 +137,10 @@ fi
 NUM_HOST=$(grep -c "." $SELF/host-hit.ids)
 NUM_RRNA=$(grep -c "." $SELF/rRNA-hit.ids)
 NUM_HOST_RNA=$(grep -c "." $SELF/filter-hit.ids)
-echo -e "#Filter\\tdb\\tNumber"                         > $SELF/filter.txt
-echo -e "Host\\tHost\\t$NUM_HOST"                      >> $SELF/filter.txt
-echo -e "rRNA_tRNA\\trRNA_tRNA\\t$NUM_TRNA_RRNA"       >> $SELF/filter.txt
-echo -e "Both_Host_RNA\\tBoth_Host_RNA\\tNUM_HOST_RNA" >> $SELF/filter.txt
+echo -e "#Filter\\tdb\\tNumber"                          > $SELF/filter.txt
+echo -e "Host\\tHost\\t$NUM_HOST"                       >> $SELF/filter.txt
+echo -e "rRNA_tRNA\\trRNA_tRNA\\t$NUM_RRNA"             >> $SELF/filter.txt
+echo -e "Both_Host_RNA\\tBoth_Host_RNA\\t$NUM_HOST_RNA" >> $SELF/filter.txt
 
 '''
 }
@@ -229,6 +229,12 @@ then
   mv $SELF/assembly/scaffolds.fasta $SELF/assembly/scaffold.fa
   rm -rf $SELF/assembly/K*
   rm -rf $SELF/assembly/tmp
+
+  gzip $SELF/assembly/*fasta &
+  gzip $SELF/assembly/*fastg &
+  gzip $SELF/assembly/*gfa   &
+  gzip $SELF/assembly/*paths &
+  wait
 
 else
   echo "not defined assembly method"
@@ -438,4 +444,77 @@ done;
 '''
 }
 
+
+NGS_batch_jobs['RGI'] = {
+  'injobs'         : ['ORF-prediction','minimap-binning'],
+  'CMD_opts'       : ['/local/ifs2_projdata/9600/projects/BIOINFO/apps/blast+/bin/'], #### Path to blast+ exe
+  'non_zero_files' : ['rgi.out.txt'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 4,               # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+source /local/ifs2_projdata/9600/projects/BIOINFO/local-py3/bin/activate
+export LD_LIBRARY_PATH=/usr/local/packages/gcc-4.7.1/lib64
+export PATH=$CMDOPTS.0:$PATH
+
+rgi main --input_sequence $INJOBS.0/ORF.faa --output_file $SELF/rgi.out --input_type protein
+rm -f $SELF/ORF.faa.temp.*
+
+$ENV.NGS_root/NGS-tools/JCVI/ann_parse_RGI.pl -i $SELF/rgi.out.txt -o $SELF/rgi.out -a $INJOBS.0/ORF-cov -b $INJOBS.1/assembly-bin
+
+'''
+}
+
+
+NGS_batch_jobs['humann2'] = {
+  'injobs'         : ['reads-filtering'],          # start with high quality reads
+  'CMD_opts'       : [],
+  'non_zero_files' : ['out_genefamilies.tsv','out_pathabundance.tsv','out_pathcoverage.tsv'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 16,               # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+source /local/ifs2_projdata/9600/projects/BIOINFO/local-py2.7/bin/activate
+LD_LIBRARY_PATH=/usr/local/packages/gcc-4.7.1/lib64
+export LD_LIBRARY_PATH
+
+cat $INJOBS.0/filtered-R1.fa.gz $INJOBS.0/filtered-R2.fa.gz  > $SELF/input.fa.gz
+humann2 --input $SELF/input.fa.gz --input-format fasta.gz --output $SELF --output-basename out \\
+  --diamond /usr/local/bin --bowtie2 /usr/local/bin --metaphlan /local/ifs2_projdata/9600/projects/BIOINFO/apps/metaphlan2 \\
+  --threads 16
+rm -f $SELF/input.fa.gz
+
+humann2_rename_table  --input $SELF/out_genefamilies.tsv --output $SELF/out_genefamilies-names.tsv --names uniref90
+humann2_renorm_table  --input $SELF/out_genefamilies-names.tsv --output $SELF/out_genefamilies-cpm.tsv --units cpm --update-snames
+humann2_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/rxn-cpm.tsv --groups uniref90_rxn
+humann2_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/go-cpm.tsv  --groups uniref90_go
+humann2_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/ec-cpm.tsv  --groups uniref90_level4ec
+humann2_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/ko-cpm.tsv  --groups uniref90_ko
+humann2_rename_table  --input $SELF/rxn-cpm.tsv      --output $SELF/rxn-cpm-name.tsv      --names metacyc-rxn
+humann2_rename_table  --input $SELF/ec-cpm.tsv       --output $SELF/ec-cpm-name.tsv       --names ec
+humann2_rename_table  --input $SELF/go-cpm.tsv       --output $SELF/go-cpm-name.tsv       --names go
+humann2_rename_table  --input $SELF/ko-cpm.tsv       --output $SELF/ko-cpm-name.tsv       --names kegg-orthology
+rm -f $SELF/ec-cpm.tsv $SELF/rxn-cpm.tsv $SELF/go-cpm.tsv $SELF/ko-cpm.tsv
+
+humann2_renorm_table  --input $SELF/out_pathabundance.tsv --output $SELF/out_pathabundance-cpm.tsv --units cpm --update-snames
+
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/out_genefamilies-cpm.tsv  -o $SELF/gene-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/out_pathabundance-cpm.tsv -o $SELF/path-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/out_pathcoverage.tsv      -o $SELF/path-cov-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/rxn-cpm-name.tsv          -o $SELF/rxn-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/ec-cpm-name.tsv           -o $SELF/ec-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/go-cpm-name.tsv           -o $SELF/go-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/ko-cpm-name.tsv           -o $SELF/ko-out
+
+$ENV.NGS_root/NGS-tools/JCVI/metaphlan2-format-tbl1.pl -i $SELF/out_humann2_temp/out_metaphlan_bugs_list.tsv -o $SELF/taxon
+
+rm -f $SELF/out_humann2_temp/out_bowtie2*
+rm -f $SELF/out_humann2_temp/out_custom*
+rm -f $SELF/out_humann2_temp/out_diamond*
+gzip $SELF/out_humann2_temp/out_metaphlan_bowtie2.txt
+
+'''
+}
 
