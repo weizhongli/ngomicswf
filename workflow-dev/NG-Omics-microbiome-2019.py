@@ -7,15 +7,15 @@ queue_system = 'SGE'
 
 ########## local variables etc. Please edit
 ENV={
-  'NGS_root' : '/home/oasis/gordon-data/NGS-ann-project-new',
+  'NGS_root' : '/local/ifs2_projdata/9600/projects/BIOINFO',
 }
 
 ########## computation resources for execution of jobs
 NGS_executions = {}
 NGS_executions['qsub_1'] = {
   'type'                : 'qsub-pe',
-  'pe_para'             : '-pe orte', #### '-pe orte' work with orte environment with $pe_slot allocation rule, '-pe threaded' work with multiple threading env
-  'qsub_exe'            : 'qsub',
+  'pe_para'             : '-pe threaded', #### '-pe orte' work with orte environment with $pe_slot allocation rule, '-pe threaded' work with multiple threading env
+  'qsub_exe'            : 'qsub -b n',
   'cores_per_node'      : 32,
   'number_nodes'        : 64,
   'user'                : 'weizhong', #### I will use command such as qstat -u weizhong to query submitted jobs
@@ -24,7 +24,8 @@ NGS_executions['qsub_1'] = {
   'command_err_opt'     : '-e',
   'command_out_opt'     : '-o',
   'template'            : '''#!/bin/bash
-#$ -q RNA.q
+#$ -q default.q
+#$ -P 9600
 #$ -v PATH
 #$ -V
 
