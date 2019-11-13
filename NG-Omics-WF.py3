@@ -318,6 +318,10 @@ def task_list_jobs(NGS_config):
 
 def task_snapshot(NGS_config):
   '''print job status'''
+
+  for i in list(NGS_config.NGS_executions.keys()):
+    execution_submitted[ i ] = 0
+
   queue_system = NGS_config.queue_system   #### default "SGE"
   this_task = True
   if this_task:
@@ -535,11 +539,24 @@ def print_job_status_summary(NGS_config):
 #### subprocess.Popen results in defunct process 
 #### communicate() with it seem to solve the problem, close the defunct process
 def local_subprocess_communicate():
+  if list(local_subprocess.keys()):
+    print('Running local pids:', list(local_subprocess.keys()))
+
   for pid in list(local_subprocess.keys()):
     if os.path.exists('/proc/' + pid):
-      local_subprocess[pid].communicate()
+      procfile = open('/proc/' + pid + '/stat')
+      line = procfile.readline()
+      ll = re.split('\s+', line.rstrip())
+      flag1 = ll[2]
+      procfile.close()
+      if (flag1 == 'Z'):
+        print('subprocess communicate ', pid, flush=True)
+        local_subprocess[pid].communicate()
+      else:
+        print('subprocess running ', pid, flush=True)
     else:
       del local_subprocess[pid]
+      print('subprocess done ', pid)
 
 
 def run_workflow(NGS_config):
@@ -553,7 +570,7 @@ def run_workflow(NGS_config):
     flag_job_done = True
     ########## reset execution_submitted to 0
     for i in list(NGS_config.NGS_executions.keys()):
-      execution_submitted[ i ] = False
+      execution_submitted[ i ] = 0
 
     flag_qstat_xml_call = False
     for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
