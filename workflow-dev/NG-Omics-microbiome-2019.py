@@ -66,8 +66,14 @@ perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr(
 perl -e '$i=0; while(<>){ if (/^@/) {$i++;  print ">Sample|$SAMPLE|$i ", substr($_,1); $a=<>; print $a; $a=<>; $a=<>;}}' < $SELF/R2.fq > $SELF/R2.fa &
 wait
 
-gzip $SELF/R1.fa &
-gzip $SELF/R2.fa &
+GZIP=gzip
+PIGZ=$(command -v pigz)
+if [ $PIGZ ]; then
+  GZIP="$PIGZ -p 2"
+fi
+
+$GZIP $SELF/R1.fa &
+$GZIP $SELF/R2.fa &
 wait
 
 rm -f $SELF/R1.fq $SELF/R2.fq $SELF/R1-s.fq $SELF/R2-s.fq
@@ -120,13 +126,19 @@ fi
 
 cat $SELF/host-hit.ids $SELF/rRNA-hit.ids | sort | uniq > $SELF/filter-hit.ids
 
+GZIP=gzip
+PIGZ=$(command -v pigz)
+if [ $PIGZ ]; then
+  GZIP="$PIGZ -p 8"
+fi
+
 if [ -s "$SELF/filter-hit.ids" ]; then
   $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/filter-hit.ids -s  $INJOBS.0/R1.fa.gz -o $SELF/filtered-R1.fa &
   $ENV.NGS_root/NGS-tools/fasta_fetch_exclude_ids.pl -i $SELF/filter-hit.ids -s  $INJOBS.0/R2.fa.gz -o $SELF/filtered-R2.fa &
   wait
 
-  gzip $SELF/filtered-R1.fa &
-  gzip $SELF/filtered-R2.fa &
+  $GZIP $SELF/filtered-R1.fa &
+  $GZIP $SELF/filtered-R2.fa &
   wait
 else
   #### do nothing, simply link 
@@ -201,7 +213,12 @@ $ENV.NGS_root/NGS-tools/centrifuge-taxon.pl -i $SELF/centrifuge-out -j $SELF/cen
   -t $ENV.NGS_root/refs/$CMDOPTS.2 -a $ENV.NGS_root/refs/$CMDOPTS.3 \\
   -o $SELF/taxon -c 1e-7 -N $NUM_reads -l 60
 
-gzip -f $SELF/centrifuge-out
+GZIP=gzip
+PIGZ=$(command -v pigz)
+if [ $PIGZ ]; then
+  GZIP="$PIGZ -p 8"
+fi
+$GZIP -f $SELF/centrifuge-out
 
 cp -p $SELF/taxon.superkingdom.txt $SELF/taxon.superkingdom-whost.txt
 grep "^Host" $INJOBS.0/filter.txt >> $SELF/taxon.superkingdom-whost.txt
