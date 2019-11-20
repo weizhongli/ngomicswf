@@ -306,6 +306,55 @@ def time_str1(s):
   return str1
 
 
+def task_logcpu(NGS_config, opt):
+
+  factor = 1
+  if (not (opt is None)):
+    if (opt == 'h'): factor = 1/3600
+    m = re.match("^[\d|\.]+$", opt)
+    if m:
+      factor = float(opt) / 3600
+
+  print('Sample', end='')
+  for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+    if subset_flag:
+      if not (t_job_id in subset_jobs):
+        continue
+    print('\t' + t_job_id, end='')
+  print('\tTotal')
+
+  for t_sample_id in NGS_samples:
+    print(t_sample_id + '\t', end=' ')
+    t_total = 0
+    for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+      if subset_flag:
+        if not (t_job_id in subset_jobs):
+          continue
+      t_sample_job = job_list[t_job_id][t_sample_id]
+      if not os.path.exists( t_sample_job['cpu_file'] ): 
+        print('\t' + 'NA', end='')
+        continue
+
+      t_cpu = 0
+      f = open(t_sample_job['cpu_file'], 'r')
+      for line in f:
+        m = re.search('cores=(\d+) time_start=(\d+) time_end=(\d+) time_spent=(\d+)', line)
+        if m:
+          t_cpu += int(m.group(4)) * int(m.group(1))
+      f.close()
+      t_total += t_cpu
+      if (factor == 1):
+        print('\t' + str(t_cpu * factor), end='')
+      else:
+        print('\t' + str(round(t_cpu * factor * 100) / 100), end='')
+
+    if (factor == 1):
+      print('\t' + str(t_total * factor))
+    else:
+      print('\t' + str(round(t_total * factor * 100) / 100))
+  return
+
+
 def task_list_jobs(NGS_config):
   for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
     t_job = NGS_config.NGS_batch_jobs[t_job_id]
@@ -877,7 +926,10 @@ to run sub set of jobs: -j qc or -j qc,fastqc
   ''')
   parser.add_argument('-J', '--task', help='''optional tasks
 write-sh: write sh files and quite
-log-cpu: gathering cpu time for each run for each sample
+log-cpu: gathering cpu time for each run for each sample, second parameter (by option -Z) optional
+  e.g. -J log-cpu
+       -J log-cpu -Z h      --- print core hours (default core seconds)
+       -J log-cpu -Z 0.06   --- print cost at $0.06 / core hour
 list-jobs: list jobs
 snapshot: snapshot current job status
 delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
@@ -922,6 +974,9 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
       exit(0)
     elif args.task == 'delete-jobs':
       task_delete_jobs(NGS_config, args.second_parameter)
+      exit(0)
+    elif args.task == 'log-cpu':
+      task_logcpu(NGS_config, args.second_parameter)
       exit(0)
     elif args.task == 'write-sh':
       exit(0)
