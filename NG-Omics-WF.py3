@@ -324,7 +324,7 @@ def task_logcpu(NGS_config, opt):
   print('\tTotal')
 
   for t_sample_id in NGS_samples:
-    print(t_sample_id + '\t', end=' ')
+    print(t_sample_id, end='')
     t_total = 0
     for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
       if subset_flag:
