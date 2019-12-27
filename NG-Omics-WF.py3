@@ -862,9 +862,12 @@ def check_submitted_job(NGS_config, t_job_id, t_sample_id):
   if (exe_type == 'sh'):
     if check_any_pids(pids):    #### still running
       execution_submitted[ t_job['execution'] ] += t_job['cores_per_cmd'] * t_job['no_parallel']
+      print('{0},{1}: still running'.format(t_job_id, t_sample_id), 'running pids:', pids)
     elif validate_job_files(t_job_id, t_sample_id):                       #### job finished
       t_sample_job['status'] = 'completed'
       print('{0},{1}: change status to completed\n'.format(t_job_id, t_sample_id))
+      #### linux reuses PIDs, so if a job finishes, replace these pids with invalid pids
+      os.system('sed -i s\/^\/0.\/ ' + t_sh_pid)
     else:
       t_sample_job['status'] = 'error'
       print('{0},{1}: change status to error\n'.format(t_job_id, t_sample_id))
