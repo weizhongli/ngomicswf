@@ -461,9 +461,9 @@ def task_delete_jobs(NGS_config, opt):
     job_to_delete_ids =[]
     if mode == 'jobids':
       job_to_delete_ids = re.split(',', c)
-    elif mode == 'run after':
+    elif mode == 'run_after':
       if not os.path.exists(c):
-        fatel_error('File does not exist:' + c, exit_code=1)
+        fatal_error('File does not exist:' + c, exit_code=1)
       for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
         if subset_flag:
           if not (t_job_id in subset_jobs): continue
@@ -474,7 +474,7 @@ def task_delete_jobs(NGS_config, opt):
         if file1_same_or_after_file2(t_sh_pid, c):
           job_to_delete_ids.append(t_job_id)
     else:
-      fatel_error('unknown option for deleteing jobs: ' + opt, exit_code=1)
+      fatal_error('unknown option for deleteing jobs: ' + opt, exit_code=1)
 
     # now job_to_delete_ids are jobs need to be deleted
     # next find all jobs that depends on them, recrusively

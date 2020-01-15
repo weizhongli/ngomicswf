@@ -30,7 +30,7 @@ else
 fi
 
 #### first sample
-SAM1=$(head -n 1 $1 | cut -f 1)
+SAM1=$(grep -v "^#" $1 | head -n 1 | cut -f 1)
 
 if [ -s $SAM1/$FUNDIR/ORF-ann-kegg-module-full-des ]
 then
@@ -119,6 +119,13 @@ then
   $p_pl -f $TAXDIR/taxon.phylum.txt          -o $2/taxon-reads-phylum.tsv       -c 1      -i 0 -a 1,2,3           -v 6
 fi  
   
+if [ -s $SAM1/RGI/rgi.out.hit.txt ]
+then
+  $p_pl -f RGI/rgi.out.hit.txt               -o $2/RGI.tsv                      -c 0 -i 0 -v 5 -a 1,2,3,4
+  $p_pl -f RGI/rgi.out.AMR_gene_family.txt   -o $2/RGI.AMR.tsv                  -c 0 -i 0 -v 1
+  $p_pl -f RGI/rgi.out.Drug_class.txt        -o $2/RGI.drug.tsv                 -c 0 -i 0 -v 1
+fi
+
 #### chdir
 cd $2
 
@@ -143,5 +150,10 @@ then
   $xlsx_py -i taxon-depth-phylum.tsv,taxon-depth-class.tsv,taxon-depth-order.tsv,taxon-depth-family.tsv,taxon-depth-genus.tsv,taxon-depth-species.tsv,taxon-depth-toprank.tsv -o taxon-depth.xlsx
   $xlsx_py -i taxon-reads-phylum.tsv,taxon-reads-class.tsv,taxon-reads-order.tsv,taxon-reads-family.tsv,taxon-reads-genus.tsv,taxon-reads-species.tsv,taxon-reads-toprank.tsv -o taxon-reads.xlsx
   $xlsx_py -i qc.tsv,taxon-superkingdom-whost.tsv,taxon-superkingdom.tsv,taxon-phylum.tsv,taxon-class.tsv,taxon-order.tsv,taxon-family.tsv,taxon-genus.tsv,taxon-species.tsv,taxon-toprank.tsv -o taxon.xlsx
+fi
+
+if [ -s RGI.tsv]
+then
+  $xlsx_py -i RGI.tsv,RGI.AMR.tsv,RGI.drug.tsv -o RGI.xlsx
 fi
 
