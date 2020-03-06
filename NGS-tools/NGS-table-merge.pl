@@ -71,14 +71,14 @@ if (1) {
     }
     if (not defined($id_name))    {
       $id_name    = $lls[$id_col];
-      $id_name .= ",$lls[$id_colj]" if ($id_colj);
+      $id_name .= "\t$lls[$id_colj]" if (defined($id_colj) and ($id_colj >=0));
     }
 
     while($ll=<TMP>){
       chop($ll);
       @lls = split(/\t/,$ll);
       $id = $lls[$id_col];
-      $id.= ",$lls[$id_colj]" if ($id_colj);
+      $id.= "\t$lls[$id_colj]" if (defined($id_colj) and ($id_colj >=0));
       $value = $lls[$value_col];
       next unless ($lls[$cutoff_col] >= $cutoff);
 
@@ -105,6 +105,7 @@ if (1) {
   }
 
   $id_name = "ID" unless $id_name;
+  $id_name = "ID1\tID2" if ( ($id_name eq "ID") and ( defined($id_colj) and ($id_colj >=0) ) );
 
   open(TOUT, "> $output") || die "can not write to $output";
   print TOUT "$id_name";

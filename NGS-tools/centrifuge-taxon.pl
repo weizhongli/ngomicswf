@@ -121,14 +121,16 @@ close(TMP);
 
 open(TMP, $centrifuge_in) || die "can not open $centrifuge_in";
 my %tid_reads_count = ();
+my %tid_bases_count = ();
 my %acc_reads_count = ();
 my $last_id = "";
 my %hit_tids = ();
 my $num_mapped_reads = 0;
+my ($id,  $rid, $tid, $score, $score2, $hit_len, $len, $nhit);
 $ll = <TMP>;
 while($ll=<TMP>) {
   chop($ll);
-  my ($id,  $rid, $tid, $score, $score2, $hit_len, $len, $nhit) = split(/\t/, $ll);
+  ($id,  $rid, $tid, $score, $score2, $hit_len, $len, $nhit) = split(/\t/, $ll);
   next if ($acc eq "unclassified");
   next unless ($hit_len >= $hit_len_cutoff);
   next unless ($em_valid_taxids{$tid}); #### avoid non EM passed taxon, for hits with ties
@@ -142,6 +144,7 @@ while($ll=<TMP>) {
     my $n = scalar keys %hit_tids;
     foreach $i (keys %hit_tids) {
       $tid_reads_count{$i} += 1/$n;
+      $tid_bases_count{$i} += $len/$n;
     }
     $num_mapped_reads++;
     %hit_tids = ();
@@ -154,6 +157,7 @@ while($ll=<TMP>) {
     my $n = scalar keys %hit_tids;
     foreach $i (keys %hit_tids) {
       $tid_reads_count{$i} += 1/$n;
+      $tid_bases_count{$i} += $len/$n;
     }
     $num_mapped_reads++;
     %hit_tids = ();
@@ -168,6 +172,7 @@ foreach $tid (keys %tid_reads_count) {
     print LOG "not defind $tid\n"; next;
   }
   my $dc = $read_length * $tid_reads_count{$tid} / $tid_2_len{$tid};
+  $dc    =                $tid_bases_count{$tid} / $tid_2_len{$tid} if ($read_length == 0);
   next unless ($dc > 0);
 
   my $expected_fc = 1 - 1 / exp($dc);
@@ -195,6 +200,7 @@ foreach $tid (keys %tid_reads_count) {
     print LOG "$tid ($n, $tid_2_len{$tid} bp) evenness error! reads $tid_reads_count{$tid}, depth $dc, observed/expected fraction $observed_fc / $expected_fc\n";
     print LOG "\tf= ",  ($observed_fc/$expected_fc), ", max contig depth $max_d at $max_acc ($acc_2_len{$max_acc}bp, $acc_reads_count{$max_acc} reads)\n";
     delete($tid_reads_count{$tid});
+    delete($tid_bases_count{$tid});
   }
 }
 
@@ -247,6 +253,7 @@ foreach $tid (keys %tid_reads_count) {
     print LOG "not defind $tid\n"; next;
   }
   $tid_depth_of_cov{$tid} = $read_length * $tid_reads_count{$tid} / $tid_2_len{$tid};
+  $tid_depth_of_cov{$tid} =                $tid_bases_count{$tid} / $tid_2_len{$tid} if ($read_length == 0);
 
   my @tid_info = @{ $taxon_info{$tid} };
   $superkingdom_ti = $tid_info[4];
@@ -342,6 +349,8 @@ usage:
     -i input, centrifuge output
     -j input, centrifuge report
     -a reference taxid to length file: .ann file made by bwa index
+    -r read length, default 300 bp
+       use 0 if your read length vary a lot, e.g. Nanopore reads 
     -l centrifuge hit length cutoff, default 60
     -c abundance cutoff, default 1e-6
     -t taxon info file for reference genomes, 

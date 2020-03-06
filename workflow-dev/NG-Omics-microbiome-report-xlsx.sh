@@ -152,7 +152,7 @@ then
   $xlsx_py -i qc.tsv,taxon-superkingdom-whost.tsv,taxon-superkingdom.tsv,taxon-phylum.tsv,taxon-class.tsv,taxon-order.tsv,taxon-family.tsv,taxon-genus.tsv,taxon-species.tsv,taxon-toprank.tsv -o taxon.xlsx
 fi
 
-if [ -s RGI.tsv]
+if [ -s RGI.tsv ]
 then
   $xlsx_py -i RGI.tsv,RGI.AMR.tsv,RGI.drug.tsv -o RGI.xlsx
 fi
