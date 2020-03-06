@@ -123,6 +123,7 @@ open(TMP, $centrifuge_in) || die "can not open $centrifuge_in";
 my %tid_reads_count = ();
 my %tid_bases_count = ();
 my %acc_reads_count = ();
+my %acc_bases_count = ();
 my $last_id = "";
 my %hit_tids = ();
 my $num_mapped_reads = 0;
@@ -139,7 +140,8 @@ while($ll=<TMP>) {
   next if     (defined( $exclude_tids{$tid}));
 
   #### $rid can be "species" "genus"
-  $acc_reads_count{$rid}++ if( $acc_2_len{$rid} );
+  $acc_reads_count{$rid}++     if( $acc_2_len{$rid} );
+  $acc_bases_count{$rid}+=$len if( $acc_2_len{$rid} );
   if    (($id    ne $last_id) and $last_id ) {
     my $n = scalar keys %hit_tids;
     foreach $i (keys %hit_tids) {
@@ -184,6 +186,7 @@ foreach $tid (keys %tid_reads_count) {
     next unless (defined($acc_2_len{$acc}));
     ## I don't have mapping coordinate, assume the max coverage on this acc =
     my $total1 = $read_length * $acc_reads_count{$acc}; 
+       $total1 =                $acc_bases_count{$acc} if ($read_length == 0);
     if ($total1 / $acc_2_len{$acc} > $max_d) {
       $max_d = $total1 / $acc_2_len{$acc};
       $max_acc = $acc;
