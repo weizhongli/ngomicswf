@@ -19,7 +19,7 @@ my $script_dir = $0;
 
 use Getopt::Std;
 
-getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:p:j:",\%opts);
+getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:p:j:k:",\%opts);
 die usage() unless (defined($opts{i}) and $opts{s} and $opts{o} and $opts{f});
 
 my $sample_file         = $opts{s}; #### NGS-samples
@@ -36,6 +36,7 @@ my $cutoff              = $opts{c}; #### cutoff values
 my $sort_flag           = $opts{t}; $sort_flag = 1 unless (defined $sort_flag);
 my $stat_flag           = $opts{p}; $stat_flag = 0 unless (defined $stat_flag);
 my $cutoff_col          = $opts{d}; $cutoff_col = $value_col unless (defined $cutoff_col);
+my $sample_skip_flag    = $opts{k}; $sample_skip_flag = 0 unless (defined $sample_skip_flag);
 
 my @ann_cols = ();if ($ann_cols) { @ann_cols = split(/,/, $ann_cols);}
 
@@ -63,7 +64,8 @@ if (1) {
 
   foreach $sample (@samples) {
     my $f1 = "$sample/$file";
-    open(TMP, $f1) || die "can not open $f1";
+    if ( $sample_skip_flag ) { open(TMP, $f1) || next ;}
+    else                     { open(TMP, $f1) || die "can not open $f1"; }
     $ll=<TMP>; chop($ll);
     my @lls = split(/\t/,$ll);
     if (not @ann_names) {
@@ -177,6 +179,10 @@ options:
     -v 0-based value column, default -1
     -c cutoff values delimited by ","
     -d 0-based column for cutoff, default column is the value column
+    -k sample_skip_flag, default 0
+       by default, program exit if file is missing for a sample,
+       when set to 1, a sample with missing file will be skipped
+
 EOD
 }
 ########## END usage
