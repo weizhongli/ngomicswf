@@ -19,7 +19,7 @@ my $script_dir = $0;
 
 use Getopt::Std;
 
-getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:p:j:k:",\%opts);
+getopts("i:o:d:f:c:t:s:r:n:l:s:a:v:h:p:j:k:V:",\%opts);
 die usage() unless (defined($opts{i}) and $opts{s} and $opts{o} and $opts{f});
 
 my $sample_file         = $opts{s}; #### NGS-samples
@@ -37,6 +37,7 @@ my $sort_flag           = $opts{t}; $sort_flag = 1 unless (defined $sort_flag);
 my $stat_flag           = $opts{p}; $stat_flag = 0 unless (defined $stat_flag);
 my $cutoff_col          = $opts{d}; $cutoff_col = $value_col unless (defined $cutoff_col);
 my $sample_skip_flag    = $opts{k}; $sample_skip_flag = 0 unless (defined $sample_skip_flag);
+my $missing_v           = $opts{V}; $missing_v = 0 unless (defined $missing_v);
 
 my @ann_cols = ();if ($ann_cols) { @ann_cols = split(/,/, $ann_cols);}
 
@@ -123,7 +124,7 @@ if (1) {
     print TOUT "\t", join("\t", @{$id_2_ann{$id}}) if (@ann_cols);
     foreach $sample (@samples) {
       my $v1 = $mat{$id}{$sample};
-         $v1 = 0 unless defined($v1);
+         $v1 = $missing_v unless defined($v1);
       print TOUT "\t$v1";
     }
     print TOUT "\t", join("\t", @{$id_2_stat{$id}}) if ($no_samples>0 and $stat_flag);
@@ -182,7 +183,7 @@ options:
     -k sample_skip_flag, default 0
        by default, program exit if file is missing for a sample,
        when set to 1, a sample with missing file will be skipped
-
+    -V missing value, default 0
 EOD
 }
 ########## END usage
