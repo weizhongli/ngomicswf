@@ -182,8 +182,12 @@ def add_subset_jobs_by_dependency(NGS_config):
 #### END add_subset_jobs_by_dependency()
 
        
-def make_job_list(NGS_config):
+def make_job_list(NGS_config, opt):
   '''make sh script for each job / sample'''
+
+  over_write_flag = False
+  if (not (opt is None)):
+    over_write_flag = True
 
   verify_flag = False
   for t_job_id in NGS_config.NGS_batch_jobs:
@@ -266,6 +270,10 @@ def make_job_list(NGS_config):
         'complete_file': f_complete,
         'cpu_file'     : f_cpu }
 
+      if over_write_flag:
+        if os.path.exists( t_sh_file ):
+          os.system('rm -f ' + t_sh_file)
+        
       if not os.path.exists( t_sh_file ):
         try:
           tsh = open(t_sh_file, 'w')
@@ -929,6 +937,8 @@ to run sub set of jobs: -j qc or -j qc,fastqc
   ''')
   parser.add_argument('-J', '--task', help='''optional tasks
 write-sh: write sh files and quite
+  e.g. -J write-sh          --- write sh files, does not over write existing sh files
+       -J write-sh -Z r     --- writh sh files, over write existing sh files
 log-cpu: gathering cpu time for each run for each sample, second parameter (by option -Z) optional
   e.g. -J log-cpu
        -J log-cpu -Z h      --- print core hours (default core seconds)
@@ -966,7 +976,7 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
   if not os.path.exists('WF-sh'): os.system('mkdir WF-sh')
 
   task_level_jobs(NGS_config)
-  make_job_list(NGS_config)
+  make_job_list(NGS_config, args.second_parameter)
 
   if args.task:
     if args.task == 'list-jobs':
