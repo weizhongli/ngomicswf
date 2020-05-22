@@ -221,7 +221,7 @@ foreach $i (@reads_mapped) {
     push(@mapped_tids, $j) unless (defined($failed_evenness_tids{$j} ));
   }
   if (@mapped_tids) {
-    print OUTR "$i\t", join("|", @mapped_tids), "\n";
+    print OUTR "$id\t", join("|", @mapped_tids), "\n";
   }
 }
 close(OUTR);
