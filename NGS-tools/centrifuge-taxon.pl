@@ -37,6 +37,7 @@ my $out_species      = "$output-species";
 my $num_total_reads  = $opts{N};
 my $num_unmapped_reads = 0;
 my $log_f            = "$output-log";
+my $output_mapped    = "$output-mapped-reads.ids";
 
 my ($i, $j, $k, $ll, $cmd);
 
@@ -120,6 +121,7 @@ close(TMP);
 #### based on sam-to-taxon-abs-ez.pl
 
 open(TMP, $centrifuge_in) || die "can not open $centrifuge_in";
+my @reads_mapped = ();
 my %tid_reads_count = ();
 my %tid_bases_count = ();
 my %acc_reads_count = ();
@@ -148,6 +150,7 @@ while($ll=<TMP>) {
       $tid_reads_count{$i} += 1/$n;
       $tid_bases_count{$i} += $len/$n;
     }
+    push(@reads_mapped, [$last_id, keys %hit_tids]);
     $num_mapped_reads++;
     %hit_tids = ();
   }
@@ -161,6 +164,7 @@ while($ll=<TMP>) {
       $tid_reads_count{$i} += 1/$n;
       $tid_bases_count{$i} += $len/$n;
     }
+    push(@reads_mapped, [$last_id, keys %hit_tids]);
     $num_mapped_reads++;
     %hit_tids = ();
   }
@@ -169,6 +173,7 @@ close(TMP);
 
 
 #### evenness filtering
+my %failed_evenness_tids = ();
 foreach $tid (keys %tid_reads_count) {
   if (not defined($tid_2_len{$tid})) {
     print LOG "not defind $tid\n"; next;
@@ -204,9 +209,22 @@ foreach $tid (keys %tid_reads_count) {
     print LOG "\tf= ",  ($observed_fc/$expected_fc), ", max contig depth $max_d at $max_acc ($acc_2_len{$max_acc}bp, $acc_reads_count{$max_acc} reads)\n";
     delete($tid_reads_count{$tid});
     delete($tid_bases_count{$tid});
+    $failed_evenness_tids{$tid} = 1;
   }
 }
 
+open(OUTR, "> $output_mapped") || die "can not write to $output_mapped";
+foreach $i (@reads_mapped) {
+  my ($id, @tids) = @{ $i };
+  my @mapped_tids = ();
+  foreach $j (@tids) {
+    push(@mapped_tids, $j) unless (defined($failed_evenness_tids{$j} ));
+  }
+  if (@mapped_tids) {
+    print OUTR "$i\t", join("|", @mapped_tids), "\n";
+  }
+}
+close(OUTR);
 
 if (not defined($num_total_reads)) {
   $num_total_reads = $num_mapped_reads;

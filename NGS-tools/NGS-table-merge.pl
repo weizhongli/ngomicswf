@@ -38,6 +38,7 @@ my $stat_flag           = $opts{p}; $stat_flag = 0 unless (defined $stat_flag);
 my $cutoff_col          = $opts{d}; $cutoff_col = $value_col unless (defined $cutoff_col);
 my $sample_skip_flag    = $opts{k}; $sample_skip_flag = 0 unless (defined $sample_skip_flag);
 my $missing_v           = $opts{V}; $missing_v = 0 unless (defined $missing_v);
+my %samples_to_skip = ();
 
 my @ann_cols = ();if ($ann_cols) { @ann_cols = split(/,/, $ann_cols);}
 
@@ -65,8 +66,13 @@ if (1) {
 
   foreach $sample (@samples) {
     my $f1 = "$sample/$file";
-    if ( $sample_skip_flag ) { open(TMP, $f1) || next ;}
-    else                     { open(TMP, $f1) || die "can not open $f1"; }
+    if ( not (-s $f1)) {
+      if ($sample_skip_flag) {
+        $samples_to_skip{$sample} = 1;
+        next;
+      }
+    }
+    open(TMP, $f1) || die "can not open $f1"; 
     $ll=<TMP>; chop($ll);
     my @lls = split(/\t/,$ll);
     if (not @ann_names) {
@@ -93,6 +99,15 @@ if (1) {
       $mat{$id}{$sample} = $value;
     }
     close(TMP);
+  }
+  if (%samples_to_skip) {
+    my @t1 = ();
+    foreach $sample (@samples) {
+      next if ($samples_to_skip{$sample});
+      push(@t1, $sample);
+    }
+    @samples = @t1;
+    $no_samples = $#samples+1;
   }
 
   my @ids = sort keys %ids;
