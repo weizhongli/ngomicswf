@@ -268,6 +268,7 @@ mv -f $SELF/assembly/scaffold-new.fa $SELF/assembly/scaffold.fa
 ## depth of coverage
 
 perl -e 'while(<>){ if ($_ =~ /^>(\S+)/) { $id=$1;  if ($_ =~ /_cov_([\d\.]+)/) { print "$id\\t$1\\n";} } }' < $SELF/assembly/scaffold.fa > $SELF/assembly/scaffold-cov
+$ENV.NGS_root/NGS-tools/fasta_N50.pl -i $SELF/assembly/scaffold.fa > $SELF/assembly/scaffold.txt
 
 ## $NGS_bin_dir/bwa index -a bwtsw -p $SELF/scaffold $SELF/scaffold.fa
 ## insert coverage 
