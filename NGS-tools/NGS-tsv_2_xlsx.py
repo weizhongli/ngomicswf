@@ -20,15 +20,27 @@ if __name__ == "__main__":
 
   parser.add_argument('-i', '--input',       help="input tsv files, required", required=True)
   parser.add_argument('-o', '--output',      help="output xlsx file, required", required=True)
+  parser.add_argument('-l', '--label',       help="optional labels for each sheet, optional")
+
   args = parser.parse_args()
 
+  labs = re.split(',', args.input)
+  for i in range(len(labs)):
+    labs[i] = re.sub('.tsv','',labs[i])
+    labs[i] = re.sub('.txt','',labs[i])
+
+  if (not args.label is None):
+    labs = re.split(',', args.label)
+
   workbook = Workbook(args.output, {'strings_to_numbers': True} )
+  i = 0;
   for tsvfile in re.split(',', args.input):
-    worksheet = workbook.add_worksheet( re.sub('.tsv', '', tsvfile))
+    worksheet = workbook.add_worksheet(labs[i])
     with open(tsvfile, 'rt') as f:
       reader = csv.reader(f, delimiter='\t')
       for r, row in enumerate(reader):
         for c, col in enumerate(row):
           worksheet.write(r, c, col)
+    i = i+1
   workbook.close()
 
