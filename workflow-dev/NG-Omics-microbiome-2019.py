@@ -191,8 +191,10 @@ java -jar $ENV.NGS_root/apps/VarScan-2.4.2/VarScan.v2.4.2.jar  pileup2snp $SELF/
 
 NGS_batch_jobs['centrifuge-mapping'] = {
   'injobs'         : ['reads-filtering'],
-  'CMD_opts'       : ['ref-genomes-2018-1109/centrifuge/ref_full','ref-genomes-2018-1109/centrifuge/map',
-                      'ref-genomes-2018-1109/refseq_genome_taxon.tsv', 'ref-genomes-2018-1109/centrifuge/ref_full.ann'], ## 2018 version
+#  'CMD_opts'       : ['ref-genomes-2018-1109/centrifuge/ref_full','ref-genomes-2018-1109/centrifuge/map',
+#                      'ref-genomes-2018-1109/refseq_genome_taxon.tsv', 'ref-genomes-2018-1109/centrifuge/ref_full.ann'], ## 2018 version
+  'CMD_opts'       : ['ref-genomes-2020-0622/centrifuge/ref_full','ref-genomes-2020-0622/centrifuge/map',
+                      'ref-genomes-2020-0622/refseq_genome_taxon.tsv', 'ref-genomes-2020-0622/centrifuge/ref_full.ann'], ## 2020 version
   'non_zero_files' : ['centrifuge-out.gz','centrifuge-taxon','centrifuge-report'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
@@ -306,8 +308,10 @@ $ENV.NGS_root/NGS-tools/assembly-cov-pass-to-orf.pl -i $SELF/ORF.faa -d $INJOBS.
 
 NGS_batch_jobs['minimap-binning'] = {
   'injobs'         : ['assembly','centrifuge-mapping','ORF-prediction'],
-  'CMD_opts'       : ['0.01','ref-genomes-2018-1109/bwa/ref_full.fna','ref-genomes-2018-1109/bwa/ref_full.fna.header',
-                      'ref-genomes-2018-1109/refseq_genome_taxon.tsv'],
+#  'CMD_opts'       : ['0.01','ref-genomes-2018-1109/bwa/ref_full.fna','ref-genomes-2018-1109/bwa/ref_full.fna.header',
+#                      'ref-genomes-2018-1109/refseq_genome_taxon.tsv'], ## 2018 version
+  'CMD_opts'       : ['0.01','ref-genomes-2020-0622/bwa/ref_full.fna','ref-genomes-2020-0622/bwa/ref_full.fna.header',
+                      'ref-genomes-2020-0622/refseq_genome_taxon.tsv','ref-genomes-2020-0622/bwa/ref_full.taxid.len'], ## 2020 version
   'non_zero_files' : ['assembly-bin'],
   'execution'      : 'qsub_1',        # where to execute
   'cores_per_cmd'  : 16,              # number of threads used by command below
@@ -323,7 +327,7 @@ $ENV.NGS_root/apps/minimap2/minimap2 $SELF/high_cov_ref.fna $INJOBS.0/assembly/s
 rm -f $SELF/high_cov_ref.fna
 
 $ENV.NGS_root/NGS-tools/JCVI/minimap-binning-taxon.pl -i $SELF/hits.paf -s $INJOBS.0/assembly/scaffold.fa \\
-  -t $ENV.NGS_root/refs/$CMDOPTS.3 -o $SELF/assembly-bin
+  -t $ENV.NGS_root/refs/$CMDOPTS.3 -r $ENV.NGS_root/refs/$CMDOPTS.4 -o $SELF/assembly-bin
 '''
 }
 
