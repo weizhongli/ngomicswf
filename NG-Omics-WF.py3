@@ -55,6 +55,7 @@ qstat_xml_data = collections.defaultdict(dict)
 job_list = collections.defaultdict(dict)  # as job_list[$t_job_id][$t_sample_id] = {}
 execution_submitted = {}                  # number of submitted jobs (qsub) or threads (local sh)
 local_subprocess = {}
+wf_run_by_sample = False
 ############## END Global variables
 
 
@@ -695,90 +696,178 @@ def run_workflow(NGS_config):
 
     ########## submit local sh jobs
     has_submitted_some_jobs = False
-    for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
-      t_job = NGS_config.NGS_batch_jobs[t_job_id]
-      if subset_flag:
-        if not (t_job_id in subset_jobs):
-          continue
-      t_execution = NGS_config.NGS_executions[ t_job['execution']]
-      t_execution_id = t_job['execution']
-      if t_execution['type'] != 'sh': 
-        continue
-      if execution_submitted[t_execution_id] >= t_execution['cores_per_node']:
-        continue
+    if wf_run_by_sample:
       for t_sample_id in NGS_samples:
-        t_sample_job = job_list[t_job_id][t_sample_id]
-        if t_sample_job['status'] != 'ready':
-          continue
-        if (execution_submitted[t_execution_id] + t_job['cores_per_cmd'] * t_job['no_parallel']) > \
-            t_execution['cores_per_node']: #### no enough available cores
-          continue
+        for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+          t_job = NGS_config.NGS_batch_jobs[t_job_id]
+          if subset_flag:
+            if not (t_job_id in subset_jobs):
+              continue
+          t_execution = NGS_config.NGS_executions[ t_job['execution']]
+          t_execution_id = t_job['execution']
+          if t_execution['type'] != 'sh': 
+            continue
+          if execution_submitted[t_execution_id] >= t_execution['cores_per_node']:
+            continue
 
-        #### now submitting 
-        pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
-        for i in range(0, t_job['no_parallel']):
-          err_f = t_sample_job['sh_file'] + '.' + str(i) + '.err'
-          #p = subprocess.Popen(['/bin/bash', t_sample_job['sh_file']], shell=True)
-          #p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >/dev/null 2>&1 &' ], shell=True, close_fds=True)
-          #p = subprocess.Popen([t_sample_job['sh_file'] , ' >/dev/null 2>&1 &' ], shell=True, executable='/bin/bash')
-          p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >' + err_f + ' 2>&1' ], shell=True, \
-             executable='/bin/bash', stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
+          t_sample_job = job_list[t_job_id][t_sample_id]
+          if t_sample_job['status'] != 'ready':
+            continue
+          if (execution_submitted[t_execution_id] + t_job['cores_per_cmd'] * t_job['no_parallel']) > \
+              t_execution['cores_per_node']: #### no enough available cores
+            continue
+ 
+          #### now submitting 
+          pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
+          for i in range(0, t_job['no_parallel']):
+            err_f = t_sample_job['sh_file'] + '.' + str(i) + '.err'
+            #p = subprocess.Popen(['/bin/bash', t_sample_job['sh_file']], shell=True)
+            #p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >/dev/null 2>&1 &' ], shell=True, close_fds=True)
+            #p = subprocess.Popen([t_sample_job['sh_file'] , ' >/dev/null 2>&1 &' ], shell=True, executable='/bin/bash')
+            p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >' + err_f + ' 2>&1' ], shell=True, \
+               executable='/bin/bash', stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
+ 
+            pid_file.write(str(p.pid)+'\n')
+            local_subprocess[ str(p.pid) ] = p
+          pid_file.close()
+          t_sample_job['status'] = 'submitted'
+          print('{0},{1}: change status to submitted\n'.format(t_job_id, t_sample_id))
+          execution_submitted[ t_execution_id ] += t_job['cores_per_cmd'] * t_job['no_parallel'] 
+          has_submitted_some_jobs = True
 
-          pid_file.write(str(p.pid)+'\n')
-          local_subprocess[ str(p.pid) ] = p
-        pid_file.close()
-        t_sample_job['status'] = 'submitted'
-        print('{0},{1}: change status to submitted\n'.format(t_job_id, t_sample_id))
-        execution_submitted[ t_execution_id ] += t_job['cores_per_cmd'] * t_job['no_parallel'] 
-        has_submitted_some_jobs = True
+    else:
+      for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+        t_job = NGS_config.NGS_batch_jobs[t_job_id]
+        if subset_flag:
+          if not (t_job_id in subset_jobs):
+            continue
+        t_execution = NGS_config.NGS_executions[ t_job['execution']]
+        t_execution_id = t_job['execution']
+        if t_execution['type'] != 'sh': 
+          continue
+        if execution_submitted[t_execution_id] >= t_execution['cores_per_node']:
+          continue
+        for t_sample_id in NGS_samples:
+          t_sample_job = job_list[t_job_id][t_sample_id]
+          if t_sample_job['status'] != 'ready':
+            continue
+          if (execution_submitted[t_execution_id] + t_job['cores_per_cmd'] * t_job['no_parallel']) > \
+              t_execution['cores_per_node']: #### no enough available cores
+            continue
+ 
+          #### now submitting 
+          pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
+          for i in range(0, t_job['no_parallel']):
+            err_f = t_sample_job['sh_file'] + '.' + str(i) + '.err'
+            #p = subprocess.Popen(['/bin/bash', t_sample_job['sh_file']], shell=True)
+            #p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >/dev/null 2>&1 &' ], shell=True, close_fds=True)
+            #p = subprocess.Popen([t_sample_job['sh_file'] , ' >/dev/null 2>&1 &' ], shell=True, executable='/bin/bash')
+            p = subprocess.Popen(['/bin/bash' + ' ' + t_sample_job['sh_file'] + ' >' + err_f + ' 2>&1' ], shell=True, \
+               executable='/bin/bash', stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
+ 
+            pid_file.write(str(p.pid)+'\n')
+            local_subprocess[ str(p.pid) ] = p
+          pid_file.close()
+          t_sample_job['status'] = 'submitted'
+          print('{0},{1}: change status to submitted\n'.format(t_job_id, t_sample_id))
+          execution_submitted[ t_execution_id ] += t_job['cores_per_cmd'] * t_job['no_parallel'] 
+          has_submitted_some_jobs = True
     ########## END submit local sh jobs
 
     ########## submit qsub-pe jobs, multiple jobs may share same node
-    for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
-      t_job = NGS_config.NGS_batch_jobs[t_job_id]
-      if subset_flag:
-        if not (t_job_id in subset_jobs):
-          continue
-      t_execution = NGS_config.NGS_executions[ t_job['execution']]
-      t_execution_id = t_job['execution']
-
-      if t_execution['type'] != 'qsub-pe':
-        continue
-      if execution_submitted[t_execution_id] >= t_execution['number_nodes']:
-        continue
-      t_cores_per_node = t_execution['cores_per_node']
-      t_cores_per_cmd  = t_job['cores_per_cmd']
-      t_cores_per_job  = t_cores_per_cmd * t_job['no_parallel']
-      t_nodes_per_job  = t_cores_per_job / t_cores_per_node
-
+    if wf_run_by_sample:
       for t_sample_id in NGS_samples:
-        t_sample_job = job_list[t_job_id][t_sample_id]
-        if t_sample_job['status'] != 'ready':
+        for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+          t_job = NGS_config.NGS_batch_jobs[t_job_id]
+          if subset_flag:
+            if not (t_job_id in subset_jobs):
+              continue
+          t_execution = NGS_config.NGS_executions[ t_job['execution']]
+          t_execution_id = t_job['execution']
+  
+          if t_execution['type'] != 'qsub-pe':
+            continue
+          if execution_submitted[t_execution_id] >= t_execution['number_nodes']:
+            continue
+          t_cores_per_node = t_execution['cores_per_node']
+          t_cores_per_cmd  = t_job['cores_per_cmd']
+          t_cores_per_job  = t_cores_per_cmd * t_job['no_parallel']
+          t_nodes_per_job  = t_cores_per_job / t_cores_per_node
+ 
+          t_sample_job = job_list[t_job_id][t_sample_id]
+          if t_sample_job['status'] != 'ready':
+            continue
+ 
+          #### now submitting 
+          pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
+          for i in range(0, t_job['no_parallel']):
+            t_stderr = t_sample_job['sh_file'] + '.' + str(i) + '.stderr'
+            t_stdout = t_sample_job['sh_file'] + '.' + str(i) + '.stdout'
+ 
+            qsub_exe = 'qsub'
+            if 'qsub_exe' in list(t_execution.keys()): qsub_exe = t_execution['qsub_exe']
+            command_line = qsub_exe + ' {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
+                                                                            t_execution['command_err_opt'], t_stderr, 
+                                                                            t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])
+            cmd = subprocess.check_output([command_line], shell=True).decode('utf-8')
+            if re.search('\d+', cmd):
+              pid = re.search('\d+', cmd).group(0)
+              pid_file.write(pid + '\n')
+            else:
+              fatal_error('error submitting jobs')
+            execution_submitted[t_execution_id] += t_nodes_per_job
+            print('{0} submitted for {1}\n'.format(t_sample_job['sh_file'], t_sample_id))
+ 
+          pid_file.close()
+          t_sample_job['status'] = 'submitted'
+          has_submitted_some_jobs = True
+
+    else:
+      for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+        t_job = NGS_config.NGS_batch_jobs[t_job_id]
+        if subset_flag:
+          if not (t_job_id in subset_jobs):
+            continue
+        t_execution = NGS_config.NGS_executions[ t_job['execution']]
+        t_execution_id = t_job['execution']
+ 
+        if t_execution['type'] != 'qsub-pe':
           continue
-
-        #### now submitting 
-        pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
-        for i in range(0, t_job['no_parallel']):
-          t_stderr = t_sample_job['sh_file'] + '.' + str(i) + '.stderr'
-          t_stdout = t_sample_job['sh_file'] + '.' + str(i) + '.stdout'
-
-          qsub_exe = 'qsub'
-          if 'qsub_exe' in list(t_execution.keys()): qsub_exe = t_execution['qsub_exe']
-          command_line = qsub_exe + ' {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
-                                                                          t_execution['command_err_opt'], t_stderr, 
-                                                                          t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])
-          cmd = subprocess.check_output([command_line], shell=True).decode('utf-8')
-          if re.search('\d+', cmd):
-            pid = re.search('\d+', cmd).group(0)
-            pid_file.write(pid + '\n')
-          else:
-            fatal_error('error submitting jobs')
-          execution_submitted[t_execution_id] += t_nodes_per_job
-          print('{0} submitted for {1}\n'.format(t_sample_job['sh_file'], t_sample_id))
-
-        pid_file.close()
-        t_sample_job['status'] = 'submitted'
-        has_submitted_some_jobs = True
+        if execution_submitted[t_execution_id] >= t_execution['number_nodes']:
+          continue
+        t_cores_per_node = t_execution['cores_per_node']
+        t_cores_per_cmd  = t_job['cores_per_cmd']
+        t_cores_per_job  = t_cores_per_cmd * t_job['no_parallel']
+        t_nodes_per_job  = t_cores_per_job / t_cores_per_node
+ 
+        for t_sample_id in NGS_samples:
+          t_sample_job = job_list[t_job_id][t_sample_id]
+          if t_sample_job['status'] != 'ready':
+            continue
+ 
+          #### now submitting 
+          pid_file = open( t_sample_job['sh_file'] + '.pids', 'w')
+          for i in range(0, t_job['no_parallel']):
+            t_stderr = t_sample_job['sh_file'] + '.' + str(i) + '.stderr'
+            t_stdout = t_sample_job['sh_file'] + '.' + str(i) + '.stdout'
+ 
+            qsub_exe = 'qsub'
+            if 'qsub_exe' in list(t_execution.keys()): qsub_exe = t_execution['qsub_exe']
+            command_line = qsub_exe + ' {0} {1} {2} {3} {4} {5} {6}'.format(t_execution['command_name_opt'], t_job_id,
+                                                                            t_execution['command_err_opt'], t_stderr, 
+                                                                            t_execution['command_out_opt'], t_stdout, t_sample_job['sh_file'])
+            cmd = subprocess.check_output([command_line], shell=True).decode('utf-8')
+            if re.search('\d+', cmd):
+              pid = re.search('\d+', cmd).group(0)
+              pid_file.write(pid + '\n')
+            else:
+              fatal_error('error submitting jobs')
+            execution_submitted[t_execution_id] += t_nodes_per_job
+            print('{0} submitted for {1}\n'.format(t_sample_job['sh_file'], t_sample_id))
+ 
+          pid_file.close()
+          t_sample_job['status'] = 'submitted'
+          has_submitted_some_jobs = True
     ########## END submit qsub-pe jobs, multiple jobs may share same node
    
     ########## submit qsub jobs, job bundles disabled here, if need, check the original Perl script
@@ -951,11 +1040,18 @@ delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
   ''')
   parser.add_argument('-Z', '--second_parameter', help='secondary parameter used by other options, such as -J')
   parser.add_argument('-Q', '--queye', help='queue system, e.g. PBS, SGE', default='SGE')
+  parser.add_argument('-f', '--finishing_by_sample',  action='store_true', help='''how to finish jobs, optional
+by default, the workflow will first run a upstream job for all samples before running the next job
+if use -f or --finishing_order, then the workflow will try to run all the jobs for one sample before running the next sample
+  ''')
 
   args = parser.parse_args()
 
   if (args.sample_file is None) and (args.sample_name is None) :
     parser.error('No sample file or sample name')
+
+  if args.finishing_by_sample :
+    wf_run_by_sample = True
 
   ## possible read in mulitple files
   for line in re.split(',', args.input):
