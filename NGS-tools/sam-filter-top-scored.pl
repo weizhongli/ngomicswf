@@ -12,9 +12,10 @@
 #### still don't allow reads that mapped to different ref, i.e. 6th field is not "="
 
 use Getopt::Std;
-getopts("T:o:F:O:",\%opts);
+getopts("i:T:o:F:O:",\%opts);
 die usage() unless ($opts{T});
 
+my $sam_in           = $opts{i};
 my $map_score_cutoff = $opts{T};
 my $output           = $opts{o};
 my $output_ID        = $opts{O};
@@ -37,7 +38,14 @@ my @R1_alns = ();
 my @R2_alns = ();
 my $read_pair = "";
 
-while($ll=<>){
+$input_fh = "STDIN";
+if ($sam_in) {
+  open(TMP, $sam_in) || die "can not open $sam_in";
+  $input_fh = "TMP";
+}
+
+
+while($ll=<$fh>){
   if ($ll =~ /^\@/) { #### headers
     print $fh $ll;
     next;
@@ -256,6 +264,7 @@ EOD
     }
 
 
+close(TMP) if ($sam_in);
 close(OUT) if ($output);
 close(OUTID) if ($output_ID);
 
@@ -306,9 +315,10 @@ then prints out top scored alignments
      it prints out multiple alignments (with different reference) of the same top score
 
 usage:
-  $script_name  -T alignment_cutoff_score
+  $0  -T alignment_cutoff_score
 
   options
+    -i input SAM file, default STDIN
     -o output file, default STDOUT
     -T alignment cutoff score, defined in sam as AS:i:score
 EOD
