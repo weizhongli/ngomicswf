@@ -45,7 +45,7 @@ if ($sam_in) {
 }
 
 
-while($ll=<$fh>){
+while($ll=<$input_fh>){
   if ($ll =~ /^\@/) { #### headers
     print $fh $ll;
     next;
