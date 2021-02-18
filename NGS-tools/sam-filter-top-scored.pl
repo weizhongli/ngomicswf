@@ -126,22 +126,19 @@ EOD
         foreach $i (keys %rid_score) {
           $rid_score_R1{$i} = 0 unless (defined($rid_score_R1{$i}));
           $rid_score_R2{$i} = 0 unless (defined($rid_score_R2{$i}));
-          if ($rid_proper_pair{$i} eq "=") {
+          if (($rid_proper_pair{$i} eq "=") and ($rid_score_R1{$i}>0) and ($rid_score_R2{$i}>0)) {
             $rid_score{$i} = $rid_score_R1{$i} + $rid_score_R2{$i};
             $rid_score_source{$i} = "R12";
           }
           else {
             $rid_score{$i}        = $rid_score_R1{$i} > $rid_score_R2{$i} ? $rid_score_R1{$i} : $rid_score_R2{$i};
             $rid_score_source{$i} = $rid_score_R1{$i} > $rid_score_R2{$i} ? "R1" : "R2";
-            
           }
         }
 
-        my @scores = values %rid_score;
-           @scores = sort{$b<=>$a} @scores;
+        my @scores = sort{$b<=>$a} values %rid_score;
         my $top_score = $scores[0];
         my @out_rids = ();
-
         foreach $i (keys %rid_score) {
           push(@out_rids, $i) if ($rid_score{$i} >= $top_score);
         }
@@ -179,6 +176,7 @@ EOD
 
    #### last reads
     if    ($last_id) {
+
       if ($read_pair eq "SE") {
         @R1_alns = sort { $b->[2] <=> $a->[2] } @R1_alns;
         my $top_score = $R1_alns[0]->[2];
@@ -221,22 +219,19 @@ EOD
         foreach $i (keys %rid_score) {
           $rid_score_R1{$i} = 0 unless (defined($rid_score_R1{$i}));
           $rid_score_R2{$i} = 0 unless (defined($rid_score_R2{$i}));
-          if ($rid_proper_pair{$i} eq "=") {
+          if (($rid_proper_pair{$i} eq "=") and ($rid_score_R1{$i}>0) and ($rid_score_R2{$i}>0)) {
             $rid_score{$i} = $rid_score_R1{$i} + $rid_score_R2{$i};
             $rid_score_source{$i} = "R12";
           }
           else {
             $rid_score{$i}        = $rid_score_R1{$i} > $rid_score_R2{$i} ? $rid_score_R1{$i} : $rid_score_R2{$i};
             $rid_score_source{$i} = $rid_score_R1{$i} > $rid_score_R2{$i} ? "R1" : "R2";
-            
           }
         }
 
-        my @scores = values %rid_score;
-           @scores = sort{$b<=>$a} @scores;
+        my @scores = sort{$b<=>$a} values %rid_score;
         my $top_score = $scores[0];
         my @out_rids = ();
-
         foreach $i (keys %rid_score) {
           push(@out_rids, $i) if ($rid_score{$i} >= $top_score);
         }
@@ -257,10 +252,6 @@ EOD
       else {
         print STDERR "no pair info for $last_id\n";
       }
-
-      @R1_alns = ();
-      @R2_alns = ();
-      $read_pair = "";
     }
 
 
