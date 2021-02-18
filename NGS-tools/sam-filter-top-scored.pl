@@ -12,11 +12,11 @@
 #### still don't allow reads that mapped to different ref, i.e. 6th field is not "="
 
 use Getopt::Std;
-getopts("i:T:o:F:O:",\%opts);
-die usage() unless ($opts{T});
+getopts("i:T:o:F:O:S:",\%opts);
 
 my $sam_in           = $opts{i};
 my $map_score_cutoff = $opts{T};
+   $map_score_cutoff = 75 unless (defined($map_score_cutoff));
 my $output           = $opts{o};
 my $output_ID        = $opts{O};
 
@@ -83,7 +83,7 @@ EOD
     my $flag_R1   = $flag & 0x0040;
     my $flag_R2   = $flag & 0x0080;
 
-    if    ($id    ne $last_id) {
+    if    (($id    ne $last_id) and $last_id) {
       if ($read_pair eq "SE") {
         @R1_alns = sort { $b->[2] <=> $a->[2] } @R1_alns;
         my $top_score = $R1_alns[0]->[2];
@@ -320,7 +320,7 @@ usage:
   options
     -i input SAM file, default STDIN
     -o output file, default STDOUT
-    -T alignment cutoff score, defined in sam as AS:i:score
+    -T alignment score cutoff, default 75, defined in sam as AS:i:score
 EOD
 }
 ########## END usage
