@@ -96,7 +96,7 @@ echo -e "QC_reads\\t$NUM_reads_pass" >> $SELF/qc.txt
 ##   skip:     do not run, for non-host related samples
 NGS_batch_jobs['reads-filtering'] = {
   'injobs'         : ['qc'],          # start with high quality reads
-  'CMD_opts'       : ['host/GRCh38.fa','NULL'],  # 1st option db1 for filtering against host, metaG and metaT, NONE to skip
+  'CMD_opts'       : ['host/GRCh38.fa','NONE'],  # 1st option db1 for filtering against host, metaG and metaT, NONE to skip
 #  'CMD_opts'       : ['host/GRCh38.fa','total_RNA/total_RNA'],  # 1st option db1 for filtering against host, metaG and metaT, NONE to skip
                                                                 # 2nd option db2 for filtering against rRNA etc, metaT, NONE to skip
   'non_zero_files' : ['filtered-R1.fa.gz','filtered-R2.fa.gz'],
