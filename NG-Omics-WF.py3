@@ -452,9 +452,54 @@ x\tunselected job
   return
 ### def task_snapshot():
 
+def task_delete_error_jobs(NGS_config):
+  '''manually delete jobs with error flag'''
+  tmp_sh = 'NGS-{0}.sh'.format(os.getpid())
+
+  try:
+    tsh = open(tmp_sh, 'w')
+  except IOError:
+    fatal_error('cannot write to ' + tmp_sh, exit_code=1)
+  
+  tsh.write('#Please execute the following commands\n')
+
+  queue_system = NGS_config.queue_system   #### default "SGE"
+  flag_qstat_xml_call = False
+  for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+    t_job = NGS_config.NGS_batch_jobs[t_job_id]
+    t_execution = NGS_config.NGS_executions[ t_job['execution']]
+    exe_type = t_execution['type']
+    if (queue_system == 'SGE') and (exe_type in ['qsub','qsub-pe']):
+      flag_qstat_xml_call = True
+
+  if flag_qstat_xml_call:
+    SGE_qstat_xml_query()
+
+  for t_sample_id in NGS_samples:
+    for t_job_id in list(NGS_config.NGS_batch_jobs.keys()):
+      if subset_flag:
+        if not (t_job_id in subset_jobs):
+          continue
+      check_submitted_job(NGS_config, t_job_id, t_sample_id)
+      t_sample_job = job_list[t_job_id][t_sample_id]
+      if t_sample_job['status'] == 'error':
+        t_sh_pid  = t_sample_job['sh_file'] + '.pids'
+        tsh.write('\\rm -rf {0}/{1}\n'.format(t_sample_id, t_job_id))
+        tsh.write('\\rm '+ t_sh_pid + '\n')
+        tsh.write('\n\n')
+
+  tsh.close()
+  print('The script does not delete the files, please run ' + tmp_sh + ' to delete files!!!\n\n');
+  return
+
+### def task_delete_error_jobs
 
 def task_delete_jobs(NGS_config, opt):
   '''manually delete jobs and its dependant jobs'''
+
+  if opt == 'error_job':
+    task_delete_error_jobs(NGS_config)
+    return;
 
   mode, c = re.split(':', opt)
   tmp_sh = 'NGS-{0}.sh'.format(os.getpid())
@@ -1036,7 +1081,8 @@ list-jobs: list jobs
 snapshot: snapshot current job status
 delete-jobs: delete jobs, must supply jobs delete syntax by option -Z
   e.g. -J delete-jobs -Z jobids:assembly,blast  ---delete assembly,blast and all jobs depends on them
-       -J delete-jobs -Z run_after:filename     ---delete jobs that has start time (WF.start.date) after this file, and all depending jobs
+       -J delete-jobs -Z run_after:filename     ---delete jobs that have start time (WF.start.date) after this file, and all depending jobs
+       -J delete-jobs -Z error_job              ---delete jobs that have error flags
   ''')
   parser.add_argument('-Z', '--second_parameter', help='secondary parameter used by other options, such as -J')
   parser.add_argument('-Q', '--queye', help='queue system, e.g. PBS, SGE', default='SGE')
