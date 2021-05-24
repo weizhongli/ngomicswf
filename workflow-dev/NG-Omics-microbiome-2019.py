@@ -541,3 +541,85 @@ gzip $SELF/out_humann2_temp/out_metaphlan_bowtie2.txt
 '''
 }
 
+NGS_batch_jobs['pfam-core-gene'] = {
+  'injobs'         : ['ORF-prediction'],
+  'CMD_opts'       : ['pfam/core-gene.hmm'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 8,              # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+# To search a set up hand-selected single-copy conserverd PFAMs
+# Ribosomal_L10	PF00466.19	Ribosomal protein L10
+# Ribosomal_L11_N	PF03946.13	Ribosomal protein L11, N-terminal domain
+# Ribosomal_L11	PF00298.18	Ribosomal protein L11, RNA binding domain
+# Ribosomal_L12_N	PF16320.4	Ribosomal protein L7/L12 dimerisation domain
+# Ribosomal_L12	PF00542.18	Ribosomal protein L7/L12 C-terminal domain
+# Ribosomal_L13	PF00572.17	Ribosomal protein L13
+# Ribosomal_L14	PF00238.18	Ribosomal protein L14p/L23e
+# Ribosomal_L16	PF00252.17	Ribosomal protein L16p/L10e
+# Ribosomal_L17	PF01196.18	Ribosomal protein L17
+# Ribosomal_L18p	PF00861.21	Ribosomal L18 of archaea, bacteria, mitoch. and chloroplast
+# Ribosomal_L19	PF01245.19	Ribosomal protein L19
+# Ribosomal_L1	PF00687.20	Ribosomal protein L1p/L10e family
+# Ribosomal_L20	PF00453.17	Ribosomal protein L20
+# Ribosomal_L21p	PF00829.20	Ribosomal prokaryotic L21 protein
+# Ribosomal_L22	PF00237.18	Ribosomal protein L22p/L17e
+# Ribosomal_L23	PF00276.19	Ribosomal protein L23
+# ribosomal_L24	PF17136.3	Ribosomal proteins 50S L24/mitochondrial 39S L24
+# Ribosomal_L27	PF01016.18	Ribosomal L27 protein
+# Ribosomal_L29	PF00831.22	Ribosomal L29 protein
+# Ribosomal_L2_C	PF03947.17	Ribosomal Proteins L2, C-terminal domain
+# Ribosomal_L2	PF00181.22	Ribosomal Proteins L2, RNA binding domain
+# Ribosomal_L3	PF00297.21	Ribosomal protein L3
+# Ribosomal_L4	PF00573.21	Ribosomal protein L4/L1 family
+# Ribosomal_L5	PF00281.18	Ribosomal protein L5
+# Ribosomal_L6	PF00347.22	Ribosomal protein L6
+# Ribosomal_L9_C	PF03948.13	Ribosomal protein L9, C-terminal domain
+# Ribosomal_L9_N	PF01281.18	Ribosomal protein L9, N-terminal domain
+# Ribosomal_S10	PF00338.21	Ribosomal protein S10p/S20e
+# Ribosomal_S11	PF00411.18	Ribosomal protein S11
+# Ribosomal_S13	PF00416.21	Ribosomal protein S13/S18
+# Ribosomal_S14	PF00253.20	Ribosomal protein S14p/S29e
+# Ribosomal_S15	PF00312.21	Ribosomal protein S15
+# Ribosomal_S16	PF00886.18	Ribosomal protein S16
+# Ribosomal_S17	PF00366.19	Ribosomal protein S17
+# Ribosomal_S18	PF01084.19	Ribosomal protein S18
+# Ribosomal_S19	PF00203.20	Ribosomal protein S19
+# Ribosomal_S20p	PF01649.17	Ribosomal protein S20
+# Ribosomal_S2	PF00318.19	Ribosomal protein S2
+# Ribosomal_S3_C	PF00189.19	Ribosomal protein S3, C-terminal domain
+# Ribosomal_S4	PF00163.18	Ribosomal protein S4/S9 N-terminal domain
+# Ribosomal_S5	PF00333.19	Ribosomal protein S5, N-terminal domain
+# Ribosomal_S6	PF01250.16	Ribosomal protein S6
+# Ribosomal_S7	PF00177.20	Ribosomal protein S7p/S5e
+# Ribosomal_S8	PF00410.18	Ribosomal protein S8
+# Ribosomal_S9	PF00380.18	Ribosomal protein S9/S16
+# Ribosom_S12_S23	PF00164.24	Ribosomal protein S12/S23
+
+# mkdir $SELF/orf-split
+# $ENV.NGS_root/apps/cd-hit/cd-hit-div.pl $INJOBS.0/ORF.faa               $SELF/orf-split/split        128
+#
+# for i in `seq 1 8`
+#   do $ENV.NGS_root/NGS-tools/ann_batch_run_dir.pl --INDIR1=$SELF/orf-split --OUTDIR1=$SELF/pfam --OUTDIR2=$SELF/pfam.2 --OUTDIR3=$SELF/pfam.3 \\
+#     --CPU=$SELF/WF.cpu $ENV.NGS_root/apps/hmmer/binaries/hmmscan -E 0.001 -o {OUTDIR1} --notextw --noali --cpu 1 --tblout {OUTDIR2} \\
+#     --domtblout {OUTDIR3} $ENV.NGS_root/refs/$CMDOPTS.0 {INDIR1} &
+# done
+# wait
+# $ENV.NGS_root/NGS-tools/ann_parse_hmm.pl -i $SELF/pfam.3 -o $SELF/pfam-ann.txt
+# rm -rf $SELF/orf-split
+
+$ENV.NGS_root/apps/hmmer/binaries/hmmscan -E 1e-6 -o $SELF/pfam --notextw --noali --cpu 8 --tblout $SELF/pfam.2 --domtblout $SELF/pfam.3 $ENV.NGS_root/refs/$CMDOPTS.0 $INJOBS.0/ORF.faa
+$ENV.NGS_root/NGS-tools/ann_parse_hmm.pl -i $SELF/pfam.3 -o $SELF/pfam-ann.txt
+
+echo -e "#Name\\tPfam\\tQuery\\tExpect\\tDescription" > $SELF/pfam2-raw.txt
+grep -v "^#" $SELF/pfam.2 | perl -e 'while(<>){chop; @lls=split(/\\s+/,$_, 19); print "$lls[0]\\t$lls[1]\\t$lls[2]\\t$lls[4]\\t$lls[18]\\n";  }' >> $SELF/pfam2-raw.txt
+
+echo -e "#Name\\tPfam\\tDescription\\tNumber_hits" > $SELF/pfam2-ann.txt
+grep -v "^#" $SELF/pfam2-raw.txt | \\
+  perl -e 'while(<>){chop; @lls=split(/\\t/, $_); $p=$lls[1]; $id{$p}=$lls[0]; $des{$p}=$lls[4]; $c{$p}++; } foreach $p (keys %c) {print "$id{$p}\\t$p\\t$des{$p}\\t$c{$p}\\n";}' \\
+  >> $SELF/pfam2-ann.txt
+
+'''
+}
+
