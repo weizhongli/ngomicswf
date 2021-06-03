@@ -454,6 +454,10 @@ x\tunselected job
 
 def task_delete_error_jobs(NGS_config):
   '''manually delete jobs with error flag'''
+
+  for i in list(NGS_config.NGS_executions.keys()):
+    execution_submitted[ i ] = 0
+
   tmp_sh = 'NGS-{0}.sh'.format(os.getpid())
 
   try:
