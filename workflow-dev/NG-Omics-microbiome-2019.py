@@ -541,6 +541,63 @@ gzip $SELF/out_humann2_temp/out_metaphlan_bowtie2.txt
 '''
 }
 
+NGS_batch_jobs['humann3'] = {
+  'injobs'         : ['reads-filtering'],          # start with high quality reads
+  'CMD_opts'       : ['20000000'],
+  'non_zero_files' : ['out_genefamilies.tsv','out_pathabundance.tsv','out_pathcoverage.tsv'],
+  'execution'      : 'qsub_1',        # where to execute
+  'cores_per_cmd'  : 32,               # number of threads used by command below
+  'no_parallel'    : 1,               # number of total jobs to run using command below
+  'command'        : '''
+
+source /local/ifs2_projdata/0804/projects/amr_children/IFX/anaconda3.source.me
+
+#### for ~/IFX/bowtie2-2.3.0/bowtie2
+export LD_LIBRARY_PATH=/home/wli/IFX/anaconda3/lib
+export PATH=/home/wli/IFX/bowtie2-2.3.0:$PATH
+
+## R1 only, humann3 never use paire info, and both reads can be more than needed
+zcat $INJOBS.0/filtered-R1.fa.gz | head -n $CMDOPTS.0 > $SELF/input.fa
+humann3 --input $SELF/input.fa --input-format fasta --output $SELF --output-basename out \\
+  --diamond /local/ifs2_projdata/0804/projects/amr_children/IFX/bin \\
+  --threads 16
+  ## --bowtie2 /usr/local/bin \\
+  ## --metaphlan /local/ifs2_projdata/9600/projects/BIOINFO/apps/metaphlan2 \\
+rm -f $SELF/input.fa
+
+humann_rename_table  --input $SELF/out_genefamilies.tsv --output $SELF/out_genefamilies-names.tsv --names uniref90
+humann_renorm_table  --input $SELF/out_genefamilies-names.tsv --output $SELF/out_genefamilies-cpm.tsv --units cpm --update-snames
+humann_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/rxn-cpm.tsv --groups uniref90_rxn
+humann_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/go-cpm.tsv  --groups uniref90_go
+humann_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/ec-cpm.tsv  --groups uniref90_level4ec
+humann_regroup_table --input $SELF/out_genefamilies-cpm.tsv --output $SELF/ko-cpm.tsv  --groups uniref90_ko
+humann_rename_table  --input $SELF/rxn-cpm.tsv      --output $SELF/rxn-cpm-name.tsv      --names metacyc-rxn
+humann_rename_table  --input $SELF/ec-cpm.tsv       --output $SELF/ec-cpm-name.tsv       --names ec
+humann_rename_table  --input $SELF/go-cpm.tsv       --output $SELF/go-cpm-name.tsv       --names go
+humann_rename_table  --input $SELF/ko-cpm.tsv       --output $SELF/ko-cpm-name.tsv       --names kegg-orthology
+rm -f $SELF/ec-cpm.tsv $SELF/rxn-cpm.tsv $SELF/go-cpm.tsv $SELF/ko-cpm.tsv
+
+humann_renorm_table  --input $SELF/out_pathabundance.tsv --output $SELF/out_pathabundance-cpm.tsv --units cpm --update-snames
+
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/out_genefamilies-cpm.tsv  -o $SELF/gene-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/out_pathabundance-cpm.tsv -o $SELF/path-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/out_pathcoverage.tsv      -o $SELF/path-cov-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/rxn-cpm-name.tsv          -o $SELF/rxn-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/ec-cpm-name.tsv           -o $SELF/ec-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/go-cpm-name.tsv           -o $SELF/go-out
+$ENV.NGS_root/NGS-tools/JCVI/humann2-format-tbl1.pl -i $SELF/ko-cpm-name.tsv           -o $SELF/ko-out
+
+$ENV.NGS_root/NGS-tools/JCVI/metaphlan2-format-tbl1.pl -i $SELF/out_humann_temp/out_metaphlan_bugs_list.tsv -o $SELF/taxon
+
+rm -f $SELF/out_humann_temp/out_bowtie2*
+rm -f $SELF/out_humann_temp/out_custom*
+rm -f $SELF/out_humann_temp/out_diamond*
+gzip $SELF/out_humann_temp/out_metaphlan_bowtie2.txt
+
+'''
+}
+
+
 NGS_batch_jobs['pfam-core-gene'] = {
   'injobs'         : ['ORF-prediction'],
   'CMD_opts'       : ['pfam/core-gene.hmm'],
