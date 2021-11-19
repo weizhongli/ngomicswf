@@ -121,9 +121,10 @@ fi
   
 if [ -s $SAM1/RGI/rgi.out.hit.txt ]
 then
-  $p_pl -f RGI/rgi.out.hit.txt               -o $2/RGI.tsv                      -c 0 -i 0 -v 5 -a 1,2,3,4
-  $p_pl -f RGI/rgi.out.AMR_gene_family.txt   -o $2/RGI.AMR.tsv                  -c 0 -i 0 -v 1
-  $p_pl -f RGI/rgi.out.Drug_class.txt        -o $2/RGI.drug.tsv                 -c 0 -i 0 -v 1
+  $p_pl -f RGI/rgi.out.hit.txt                  -o $2/RGI.tsv                      -c 0 -i 0 -v 5 -a 1,2,3,4
+  $p_pl -f RGI/rgi.out.AMR_gene_family.txt      -o $2/RGI.AMR.tsv                  -c 0 -i 0 -v 1
+  $p_pl -f RGI/rgi.out.Drug_class.txt           -o $2/RGI.drug.tsv                 -c 0 -i 0 -v 1
+  $p_pl -f RGI/rgi.out.Resistance_Mechanism.txt -o $2/RGI.Mech.tsv                 -c 0 -i 0 -v 1
 fi
 
 #### chdir
@@ -154,6 +155,6 @@ fi
 
 if [ -s RGI.tsv ]
 then
-  $xlsx_py -i RGI.tsv,RGI.AMR.tsv,RGI.drug.tsv -o RGI.xlsx
+  $xlsx_py -i RGI.tsv,RGI.AMR.tsv,RGI.drug.tsv,RGI.Mech.tsv -o RGI.xlsx
 fi
 
