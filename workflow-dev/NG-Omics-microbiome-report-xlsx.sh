@@ -121,10 +121,15 @@ fi
   
 if [ -s $SAM1/RGI/rgi.out.hit.txt ]
 then
-  $p_pl -f RGI/rgi.out.hit.txt                  -o $2/RGI.tsv                      -c 0 -i 0 -v 5 -a 1,2,3,4
+  $p_pl -f RGI/rgi.out.aro.txt                  -o $2/RGI.tsv                      -c 0 -i 0 -v 5 -a 1,2,3,4
   $p_pl -f RGI/rgi.out.AMR_gene_family.txt      -o $2/RGI.AMR.tsv                  -c 0 -i 0 -v 1
   $p_pl -f RGI/rgi.out.Drug_class.txt           -o $2/RGI.drug.tsv                 -c 0 -i 0 -v 1
   $p_pl -f RGI/rgi.out.Resistance_Mechanism.txt -o $2/RGI.Mech.tsv                 -c 0 -i 0 -v 1
+
+  $p_pl -f RGI/rgi.out.aro.bin.txt                  -o $2/RGI-bin.tsv                      -c 0 -i 0 -j 6 -v 7 -a 1,2,3,4,5
+  $p_pl -f RGI/rgi.out.AMR_gene_family.bin.txt      -o $2/RGI.AMR-bin.tsv                  -c 0 -i 0 -j 3 -v 4 -a 2
+  $p_pl -f RGI/rgi.out.Drug_class.bin.txt           -o $2/RGI.drug-bin.tsv                 -c 0 -i 0 -j 3 -v 4 -a 2
+  $p_pl -f RGI/rgi.out.Resistance_Mechanism.bin.txt -o $2/RGI.Mech-bin.tsv                 -c 0 -i 0 -j 3 -v 4 -a 2
 fi
 
 #### chdir
