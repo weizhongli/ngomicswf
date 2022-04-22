@@ -58,3 +58,9 @@ Required for most analysis
 Optional
 * Hmmer3 - Biological sequence analysis using profile hidden Markov models, [link](http://hmmer.org/download.html)
 * RGI - Resistance Gene Identifier, [link](https://github.com/arpcard/rgi)
+
+## Citation
+DOI:10.1101/475699, https://doi.org/10.1101/475699, https://www.biorxiv.org/content/10.1101/475699v1
+
+## License
+GNU General Public License v3.0
