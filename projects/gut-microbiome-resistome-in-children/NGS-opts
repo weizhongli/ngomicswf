@@ -1,0 +1,5 @@
+qc	100	None
+assembly	spade	250
+ORF-prediction	prodigal	20
+cd-hit-kegg	kegg/keggf
+blast-kegg	kegg/keggf	Skip
