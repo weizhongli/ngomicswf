@@ -3,6 +3,7 @@ in the microibome analysis workflow. e.g.
 https://github.com/weizhongli/ngomicswf/blob/master/workflow-dev/NG-Omics-microbiome-2019.py
 
 ## build microbial reference genome database for mapping
+This database is for mapping the reads using Centrifuge to get taxonomy abundance.
 It is very complicated and time consuming to build a good and comprehensive
 microbial reference genome database for mapping metagenomic reads for taxonomy
 profiling.
@@ -119,4 +120,10 @@ list of files like below:
 -rw-rw-r-- 1 wli 9600-grp    138162886 Jun 28  2020 ref_full.fna.fai
 -rw-rw-r-- 1 wli 9600-grp     14416730 Jun 22  2020 refseq_genome_taxon.tsv
 </pre>
+
+## download human genome database
+The human genome database, fasta file and index files formated by bwa is
+used to map the reads and filter the reads that from human contamination.
+Please download GCA_000001405.15_GRCh38_full_analysis_set.fna.bwa_index.tar.gz from [NCBI](https://ftp.ncbi.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/all_assembly_versions/GCF_000001405.26_GRCh38/GRCh38_major_release_seqs_for_alignment_pipelines/) and unzip it.
+
 
