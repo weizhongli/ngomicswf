@@ -28,6 +28,10 @@ for the the analysis in the individual steps in the workflow.
 * RGI - Resistance Gene Identifier, [link](https://github.com/arpcard/rgi)
 
 ## Databases needed for this study
+see https://github.com/weizhongli/ngomicswf/tree/master/refs-db/microbiome-workflow for
+steps to prepare reference databases such as
+* microbial genome database for mapping the reads
+* human genome database for removing human contamination
 
 ## Steps to run the analysis
 1. prepare the sample file and fastq files
