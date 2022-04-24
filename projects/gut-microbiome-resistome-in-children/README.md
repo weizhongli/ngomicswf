@@ -34,7 +34,7 @@ steps to prepare reference databases such as
 * human genome database for removing human contamination
 
 ## Steps to run the analysis
-1. prepare the sample file and fastq files
+1. prepare the sample file and fastq files  
 The sample file is included [here](https://github.com/weizhongli/ngomicswf/blob/master/projects/gut-microbiome-resistome-in-children/NGS-samples).
 For each sample (e.g. 101A), a folder need to be created using the sample ID as the folder name.
 Then, the forward reads (R1) and reverse reads (R2), both in gzipped fastq format, need to be
@@ -55,11 +55,13 @@ copied into each sample's folder, as below:
 ...
 </pre>
 
-2. configure NG-Omics-microbiome-resistome.py
+2. configure NG-Omics-microbiome-resistome.py  
 Edit the the ENV block and NGS-executions block in the top (first 44 lines) of this file.
+Also, edit each job block (e.g. NGS_batch_jobs['reads-filtering']{}), 
+so that the path of programs (e.g. bwa) used in that job block are correct. 
 See https://github.com/weizhongli/ngomicswf/wiki for info about how to edit this file.
 
-3. run the workflow
+3. run the workflow  
 run the following command:
 <pre>
 nohup python3 PATH_to_ngomicswf/NG-Omics-WF.py3 -i NG-Omics-microbiome-resistome.py -s NGS-samples -t NGS-opts \
@@ -72,11 +74,10 @@ The workflow will automatically run all the steps for all the samples.
 In the subfolder WF-sh, there are some example sh scripts for your references. Such sh scripts will be
 automatically generated for each sample, and will be executed by the workflow.
 
-4. parse the results
+4. parse the results  
 run the following command:
 <pre>
 PATH_to_ngomicswf/workflow-dev/NG-Omics-microbiome-report-xlsx.sh NGS-samples NGS-samples-dir centrifuge-mapping
 </pre>
-This will produce a list of tsv files under NGS-samples-dir. These are the files of taxonomy abundance, 
-and AMR abundance
+This will produce a list of tsv files under NGS-samples-dir. These are the files of taxonomy abundance and AMR abundance.
 
