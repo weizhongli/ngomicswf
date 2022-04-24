@@ -59,8 +59,12 @@ Optional
 * Hmmer3 - Biological sequence analysis using profile hidden Markov models, [link](http://hmmer.org/download.html)
 * RGI - Resistance Gene Identifier, [link](https://github.com/arpcard/rgi)
 
+## Documents for individual projects
+Project-specific documents, including workflow configration for that project, are available under each projects:
+* [Antibiotics alter human gut microbiome resistome and colonization resistance ...](https://github.com/weizhongli/ngomicswf/tree/master/projects/gut-microbiome-resistome-in-children)
+
 ## Citation
 DOI:10.1101/475699, https://doi.org/10.1101/475699, https://www.biorxiv.org/content/10.1101/475699v1
 
 ## License
-GNU General Public License v3.0
+[GNU General Public License v3.0](https://github.com/weizhongli/ngomicswf/blob/master/LICENSE)
