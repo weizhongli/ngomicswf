@@ -71,3 +71,5 @@ PATH_to_ngomicswf/workflow-dev/NG-Omics-microbiome-report-xlsx.sh NGS-samples NG
 </pre>
 This will produce a list of tsv files under NGS-samples-dir. These are the files of taxonomy abundance and AMR abundance.
 
+## Citation
+DOI:10.1093/infdis/jiaa155, https://academic.oup.com/jid/article/224/7/1236/5814973, https://doi.org/10.1093/infdis/jiaa155
