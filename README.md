@@ -61,7 +61,9 @@ Optional
 
 ## Documents for individual projects
 Project-specific documents, including workflow configration for that project, are available under each projects:
-* [Antibiotics alter human gut microbiome resistome and colonization resistance ...](https://github.com/weizhongli/ngomicswf/tree/master/projects/gut-microbiome-resistome-in-children)
+* [Antibiotics alter human gut microbiome resistome and colonization resistance ...](projects/gut-microbiome-resistome-in-children)
+* [Vertical transmission of gut microbiome from mother to baby ...](projects/mother-baby-microbiome-transmission)
+* [Microbial species in gut can stay lifetime](projects/twin-microbiome-SNP)
 
 ## Citation
 DOI:10.1101/475699, https://doi.org/10.1101/475699, https://www.biorxiv.org/content/10.1101/475699v1
